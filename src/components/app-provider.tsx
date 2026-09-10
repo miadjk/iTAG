@@ -150,9 +150,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const client = await requireClient();
     const email = identifier.trim();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error || !data.user) throw new Error("Invalid credentials or inactive account.");
+    if (error || !data.user) {
+      const message = (error?.message || "").toLowerCase();
+      if (message.includes("confirm")) {
+        throw new Error("This email is not confirmed yet. Register again with the same email to restore the account, then sign in.");
+      }
+      if (message.includes("rate")) {
+        throw new Error("Too many sign-in attempts. Wait a minute and try again.");
+      }
+      throw new Error("Invalid email or password.");
+    }
     const profile = await client.from("profiles").select("*").eq("id", data.user.id).maybeSingle();
-    if (!profile.data?.active) {
+    if (!profile.data) {
+      await client.auth.signOut();
+      throw new Error("This account was removed. Register again with the same email to restore it, then sign in.");
+    }
+    if (!profile.data.active) {
       await client.auth.signOut();
       throw new Error("This account is inactive.");
     }
@@ -174,27 +187,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (input: RegisterInput) => {
-    const client = await requireClient();
     if (!isNineDigitPassword(input.password)) throw new Error("Password must be exactly 9 digits.");
-    const { error } = await client.auth.signUp({
-      email: input.email.trim(),
-      password: input.password,
-      options: {
-        data: {
-          first_name: input.firstName.trim(),
-          middle_name: input.middleName?.trim() ?? "",
-          last_name: input.lastName.trim(),
-          role: "property_custodian",
-          school_id: input.schoolId,
-          region_id: input.regionId,
-          province_id: input.provinceId,
-          municipality_id: input.municipalityId,
-          district_id: input.districtId,
-        },
-      },
+    const res = await fetch("/api/register/custodian", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
     });
-    if (error) throw new Error(error.message);
-    await client.auth.signOut();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Unable to register.");
     pushToast({ title: "Account created", body: "You can now sign in with your DepEd email.", tone: "success" });
   };
 
