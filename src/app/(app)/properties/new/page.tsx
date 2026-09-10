@@ -86,7 +86,6 @@ export default function NewPropertyPage() {
       entityName: prev.entityName || first.entityName,
       fundCluster: prev.fundCluster || first.fundCluster,
       location: prev.location || first.location,
-      officeDepartment: prev.officeDepartment || first.officeDepartment,
       classification: prev.classification || first.classification,
     }));
   }, [existingGroup]);
@@ -148,7 +147,7 @@ export default function NewPropertyPage() {
         fundSource: item.fundSource,
         custodianLastUser: item.custodianLastUser,
         currentAccountablePerson: item.custodianLastUser,
-        officeDepartment: header.officeDepartment,
+        officeDepartment: "",
         location: header.location,
         estimatedUsefulLife: item.estimatedUsefulLife,
         condition: header.condition,
@@ -204,9 +203,7 @@ export default function NewPropertyPage() {
           <Field label="Location">
             <Input value={header.location} onChange={(e) => setHeader({ ...header, location: e.target.value })} />
           </Field>
-          <Field label="Office / department">
-            <Input value={header.officeDepartment} onChange={(e) => setHeader({ ...header, officeDepartment: e.target.value })} />
-          </Field>
+
         </section>
 
         {existingGroup.length ? (
