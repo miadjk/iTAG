@@ -231,22 +231,26 @@ set search_path = public
 as $$
 declare
   meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
-  chosen_role text := coalesce(meta->>'role', 'property_custodian');
+  chosen_role text := coalesce(nullif(meta->>'role', ''), 'property_custodian');
   incoming_school text := nullif(meta->>'school_id', '');
   existing_head uuid;
+  created_by_admin boolean := coalesce(meta->>'created_by_admin', '') = 'true';
 begin
   if chosen_role not in ('school_head', 'property_custodian') then
     chosen_role := 'property_custodian';
   end if;
 
-  if chosen_role = 'school_head' and incoming_school is not null then
+  if incoming_school is not null then
     select id into existing_head
     from public.profiles
     where school_id = incoming_school and role = 'school_head' and active = true
     limit 1;
-    if existing_head is not null then
-      chosen_role := 'property_custodian';
-    end if;
+  end if;
+
+  if not created_by_admin then
+    chosen_role := 'property_custodian';
+  elsif chosen_role = 'school_head' and existing_head is not null then
+    raise exception 'This school already has a School Head';
   end if;
 
   insert into public.profiles (
@@ -608,13 +612,9 @@ begin
   end if;
 
   if not created_by_admin then
-    if existing_head is null and incoming_school is not null then
-      chosen_role := 'school_head';
-    else
-      chosen_role := 'property_custodian';
-    end if;
-  elsif chosen_role = 'school_head' and existing_head is not null then
     chosen_role := 'property_custodian';
+  elsif chosen_role = 'school_head' and existing_head is not null then
+    raise exception 'This school already has a School Head';
   end if;
 
   insert into public.profiles (
@@ -682,3 +682,7 @@ as $$
     and char_length(coalesce(p_token, '')) >= 16
   limit 1
 $$;
+
+create unique index if not exists one_active_school_head
+  on public.profiles (school_id)
+  where role = 'school_head' and active = true and school_id is not null;

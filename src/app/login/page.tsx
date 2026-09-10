@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useApp } from "@/lib/app-context";
+import { isSchoolHeadHost } from "@/lib/hosts";
 
 export default function LoginPage() {
   const { login, user } = useApp();
@@ -15,6 +16,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [schoolHeadHost, setSchoolHeadHost] = useState(false);
+
+  useEffect(() => {
+    setSchoolHeadHost(isSchoolHeadHost(window.location.host));
+  }, []);
 
   useEffect(() => {
     if (user) router.replace("/dashboard");
@@ -58,7 +64,7 @@ export default function LoginPage() {
             <Field label="DepEd email">
               <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="username" />
             </Field>
-            <Field label="Password" hint="Custodian passwords are 9 digits.">
+            <Field label="Password" hint="Passwords are 9 digits.">
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </Field>
             {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
@@ -67,7 +73,7 @@ export default function LoginPage() {
             </Button>
           </div>
           <p className="mt-6 text-xs text-[var(--text-muted)]">
-            Property Custodian?{" "}
+            {schoolHeadHost ? "School Head? " : "Property Custodian? "}
             <Link href="/register" className="text-[#F1E5A1]">
               Create an account
             </Link>
