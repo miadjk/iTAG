@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { propertyQrPayload } from "@/lib/qr";
+import { propertyQrPayload, type QrPropertyView } from "@/lib/qr";
 
 export function QrCard({
   property,
 }: {
-  property: { id: string; description: string; qrCode: string; inventoryItemNumber?: string };
+  property: { id: string; inventoryItemNumber: string; description: string } & QrPropertyView;
 }) {
   const [src, setSrc] = useState("");
-  const payload = propertyQrPayload(property.qrCode);
+  const payload = useMemo(() => propertyQrPayload(property), [property]);
 
   useEffect(() => {
     QRCode.toDataURL(payload, {
@@ -19,7 +19,7 @@ export function QrCard({
       width: 360,
       errorCorrectionLevel: "M",
       color: { dark: "#111111", light: "#ffffff" },
-    }).then(setSrc);
+    }).then(setSrc, () => setSrc(""));
   }, [payload]);
 
   function download() {
@@ -36,7 +36,9 @@ export function QrCard({
       <p className="mt-1 text-sm text-[var(--text)]">{property.description}</p>
       <p className="mt-1 text-xs text-[var(--text-muted)]">{property.inventoryItemNumber}</p>
       {src ? <img src={src} alt={`QR code for ${property.description}`} className="mx-auto mt-4 w-48 bg-white p-2" /> : null}
-      <p className="mt-3 break-all text-[11px] text-[var(--text-muted)]">{payload}</p>
+      <p className="mt-3 text-[11px] text-[var(--text-muted)]">
+        Scan with any phone camera to view the details as text. Works offline.
+      </p>
       <Button type="button" className="mt-4 w-full" onClick={download}>
         Save QR image
       </Button>
