@@ -219,7 +219,7 @@ export default function NewPropertyPage() {
         {items.map((item, index) => (
           <section key={index} className="surface grid gap-4 p-5 md:grid-cols-2">
             <div className="flex items-center justify-between md:col-span-2">
-              <h2 className="font-display text-2xl">Item {index + 1}</h2>
+              <h2 className="font-display text-2xl">Property {index + 1}</h2>
               {items.length > 1 ? (
                 <button
                   type="button"
@@ -230,7 +230,7 @@ export default function NewPropertyPage() {
                 </button>
               ) : null}
             </div>
-            <Field label="Item No." error={fieldErrors[`item-${index}-no`]}>
+            <Field label="ICSNO" error={fieldErrors[`item-${index}-no`]}>
               <Input value={item.inventoryItemNumber} onChange={(e) => setItem(index, { inventoryItemNumber: e.target.value })} />
             </Field>
             <Field label="Description" error={fieldErrors[`item-${index}-desc`]}>
@@ -278,7 +278,7 @@ export default function NewPropertyPage() {
 
         <div className="flex flex-wrap gap-3">
           <Button type="button" variant="secondary" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
-            <Plus className="h-4 w-4" /> Add another item
+            <Plus className="h-4 w-4" /> Add another property
           </Button>
         </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
