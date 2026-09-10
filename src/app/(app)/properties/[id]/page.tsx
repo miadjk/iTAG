@@ -35,7 +35,7 @@ export default function PropertyDetailPage() {
       <PageHeader
         kicker={scanned ? "Scan result" : created ? "QR and Excel ready" : "Property record"}
         title={scanned ? "Scan result" : property.description}
-        description={`Item No. ${property.inventoryItemNumber} · ICSNO ${property.icsNumber}`}
+        description={`Item No. ${property.inventoryItemNumber} · ICSNO. ${property.icsNumber}`}
         actions={
           <div className="flex flex-wrap gap-2">
             {can("encode") && !editing ? (
@@ -45,7 +45,7 @@ export default function PropertyDetailPage() {
             ) : null}
             <Link href={`/properties/group/${encodeURIComponent(property.icsNumber)}`}>
               <Button type="button" variant="secondary">
-                ICSNO group
+                ICSNO. group
               </Button>
             </Link>
             <Button type="button" variant="secondary" onClick={() => downloadPropertyExcel(property, schoolProperties)}>

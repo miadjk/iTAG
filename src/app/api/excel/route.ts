@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const filename = `${header.icsNumber.replace(/[^\w.-]+/g, "_") || "ICSNO"}.xlsx`;
+  const filename = `${header.icsNumber.replace(/[^\w.-]+/g, "_") || "ICSNO."}.xlsx`;
   return new NextResponse(Buffer.from(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

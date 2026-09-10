@@ -167,7 +167,7 @@ export default function NewPropertyPage() {
       <PageHeader
         kicker="My properties"
         title="Add property"
-        description="Items that share an ICSNO stay in one group. Each item still gets its own QR code and can be exported together as Excel."
+        description="Items that share an ICSNO. stay in one group. Each item still gets its own QR code and can be exported together as Excel."
       />
       <form onSubmit={onSubmit} noValidate className="space-y-8">
         <section className="surface grid gap-4 p-5 md:grid-cols-2">
@@ -201,7 +201,7 @@ export default function NewPropertyPage() {
 
         {existingGroup.length ? (
           <p className="text-sm text-[var(--text-muted)]">
-            ICSNO {existingGroup[0].icsNumber} already has {existingGroup.length} item
+            ICSNO. {existingGroup[0].icsNumber} already has {existingGroup.length} item
             {existingGroup.length === 1 ? "" : "s"}. New items will be added to that group.
           </p>
         ) : null}

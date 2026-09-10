@@ -26,7 +26,7 @@ export async function downloadIcsExcel(icsNumber: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${icsNumber || "ICSNO"}.xlsx`;
+  a.download = `${icsNumber || "ICSNO."}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

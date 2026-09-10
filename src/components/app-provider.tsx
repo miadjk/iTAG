@@ -333,7 +333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await notifySchool({
       type: "property_registered",
       title: created.length > 1 ? "Properties registered" : "Property registered",
-      body: created.length > 1 ? `${created.length} items saved under ICSNO ${inputs[0].icsNumber}.` : `${inputs[0].inventoryItemNumber} saved.`,
+      body: created.length > 1 ? `${created.length} items saved under ICSNO. ${inputs[0].icsNumber}.` : `${inputs[0].inventoryItemNumber} saved.`,
       href: `/properties/group/${encodeURIComponent(inputs[0].icsNumber.trim())}`,
     });
     await refresh();

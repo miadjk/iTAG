@@ -35,7 +35,7 @@ export default function PropertiesPage() {
       <PageHeader
         kicker="Inventory"
         title={can("encode") ? "My properties" : "Property records"}
-        description="Search by Item No. for one property, or ICSNO for the whole group. Each item has its own QR code."
+        description="Search by Item No. for one property, or ICSNO. for the whole group. Each item has its own QR code."
         actions={
           can("encode") ? (
             <Link href="/properties/new">
@@ -51,11 +51,11 @@ export default function PropertiesPage() {
           e.preventDefault();
         }}
       >
-        <Field label="Search Item No. or ICSNO">
+        <Field label="Search Item No. or ICSNO.">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Item No. or ICSNO"
+            placeholder="Item No. or ICSNO."
           />
         </Field>
         <div className="flex items-end">
@@ -87,7 +87,7 @@ export default function PropertiesPage() {
             <article key={group.icsNumber} className="surface p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">ICSNO</p>
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">ICSNO.</p>
                   <h2 className="font-display text-3xl">{group.icsNumber}</h2>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
                     {group.properties.length} item{group.properties.length === 1 ? "" : "s"}
@@ -155,7 +155,7 @@ function SearchResults({
 }) {
   if (result.kind === "empty") return null;
   if (result.kind === "none") {
-    return <p className="text-sm text-[var(--text-muted)]">No property or ICSNO matched “{result.query}”.</p>;
+    return <p className="text-sm text-[var(--text-muted)]">No property or ICSNO. matched “{result.query}”.</p>;
   }
   if (result.kind === "item") {
     const p = result.property;
@@ -164,7 +164,7 @@ function SearchResults({
         <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">Item No.</p>
         <h2 className="font-display text-3xl">{p.inventoryItemNumber}</h2>
         <p className="mt-2 text-sm">{p.description}</p>
-        <p className="mt-1 text-xs text-[var(--text-muted)]">ICSNO {p.icsNumber}</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">ICSNO. {p.icsNumber}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href={`/properties/${p.id}`}>
             <Button type="button" variant="secondary">
@@ -183,7 +183,7 @@ function SearchResults({
           </Button>
           <Link href={`/properties/group/${encodeURIComponent(p.icsNumber)}`}>
             <Button type="button" variant="secondary">
-              Open ICSNO group
+              Open ICSNO. group
             </Button>
           </Link>
         </div>
@@ -193,7 +193,7 @@ function SearchResults({
   if (result.kind === "group") {
     return (
       <article className="surface p-5">
-        <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">ICSNO group</p>
+        <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">ICSNO. group</p>
         <h2 className="font-display text-3xl">{result.icsNumber}</h2>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{result.properties.length} items</p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -217,7 +217,7 @@ function SearchResults({
       ))}
       {result.groups.map((g) => (
         <Link key={g.icsNumber} href={`/properties/group/${encodeURIComponent(g.icsNumber)}`} className="surface block p-4 text-sm">
-          ICSNO {g.icsNumber} · {g.properties.length} items
+          ICSNO. {g.icsNumber} · {g.properties.length} items
         </Link>
       ))}
     </div>

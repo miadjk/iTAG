@@ -29,13 +29,13 @@ export default function IcsGroupPage() {
   const qrProperty = items.find((p) => p.id === qrId);
 
   if (!items.length) {
-    return <p className="text-sm text-[var(--text-muted)]">No properties found for ICSNO {ics}.</p>;
+    return <p className="text-sm text-[var(--text-muted)]">No properties found for ICSNO. {ics}.</p>;
   }
 
   return (
     <div>
       <PageHeader
-        kicker="ICSNO group"
+        kicker="ICSNO. group"
         title={items[0].icsNumber}
         description={`${items.length} properties in this group. Each item has its own QR code.`}
         actions={
