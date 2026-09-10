@@ -425,6 +425,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     throwIfError(inserted.error, "Unable to save report.");
     await writeAudit("Report generated", "report", reportType);
     await refresh();
+    pushToast({ title: "Report saved", body: `${reportType} record was saved.`, tone: "success" });
   };
 
   const assignProperty = async (input: {

@@ -11,8 +11,6 @@ const REPORTS = [
   "Complete Property Inventory",
   "Low-Value Properties",
   "High-Value Properties",
-  "Properties by Location",
-  "Properties by Accountable Person",
   "Properties by Condition",
   "Properties by Status",
   "Current Supplies",
@@ -118,9 +116,9 @@ export default function ReportsPage() {
             <thead className="bg-[var(--bg-muted)] text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
               <tr>
                 <th className="p-3 text-left">Item No.</th>
+                <th className="p-3 text-left">Entity</th>
                 <th className="p-3 text-left">Class</th>
                 <th className="p-3 text-left">Accountable</th>
-                <th className="p-3 text-left">Location</th>
                 <th className="p-3 text-left">Condition</th>
                 <th className="p-3 text-left">Status</th>
               </tr>
@@ -129,9 +127,9 @@ export default function ReportsPage() {
               {(content as typeof schoolProperties).map((p) => (
                 <tr key={p.id} className="border-t border-[var(--border)]">
                   <td className="p-3">{p.inventoryItemNumber}</td>
+                  <td className="p-3">{p.entityName}</td>
                   <td className="p-3">{classLabel(p.classification)}</td>
                   <td className="p-3">{p.currentAccountablePerson}</td>
-                  <td className="p-3">{p.location}</td>
                   <td className="p-3">{conditionBadge(p.condition)}</td>
                   <td className="p-3">{propertyStatusBadge(p.status)}</td>
                 </tr>
