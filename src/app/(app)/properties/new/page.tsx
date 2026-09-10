@@ -243,10 +243,23 @@ export default function NewPropertyPage() {
               <Input value={item.unitOfMeasure} onChange={(e) => setItem(index, { unitOfMeasure: e.target.value })} />
             </Field>
             <Field label="Quantity" error={fieldErrors[`item-${index}-qty`]}>
-              <Input type="number" min={1} value={item.quantity} onChange={(e) => setItem(index, { quantity: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={1}
+                placeholder="0"
+                value={item.quantity || ""}
+                onChange={(e) => setItem(index, { quantity: e.target.value === "" ? 0 : Number(e.target.value) })}
+              />
             </Field>
             <Field label="Unit cost" error={fieldErrors[`item-${index}-cost`]}>
-              <Input type="number" min={0} step="0.01" value={item.unitCost} onChange={(e) => setItem(index, { unitCost: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                value={item.unitCost || ""}
+                onChange={(e) => setItem(index, { unitCost: e.target.value === "" ? 0 : Number(e.target.value) })}
+              />
             </Field>
             <Field label="Total cost">
               <Input readOnly value={formatMoney(item.quantity * item.unitCost)} />
