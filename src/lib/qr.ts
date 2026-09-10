@@ -1,4 +1,5 @@
 import { formatLongDate, formatMoney } from "@/lib/utils";
+import { propertyPublicUrl } from "@/lib/site";
 
 export type QrPropertyView = {
   entityName: string;
@@ -16,10 +17,8 @@ export type QrPropertyView = {
   qrCode?: string;
 };
 
-export function propertyQrPayload(property: QrPropertyView) {
-  return propertyScanLines(property)
-    .map(([label, value]) => `${label}:${value || "—"}`)
-    .join("\n");
+export function propertyQrPayload(token: string) {
+  return propertyPublicUrl(token);
 }
 
 export function propertyScanLines(property: QrPropertyView) {
