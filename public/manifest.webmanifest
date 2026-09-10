@@ -1,6 +1,6 @@
 {
-  "name": "iTAG-PROP",
-  "short_name": "iTAG-PROP",
+  "name": "iTAG",
+  "short_name": "iTAG",
   "description": "Inventory Tracking and Property Management System for schools.",
   "start_url": "/",
   "scope": "/",

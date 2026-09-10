@@ -16,15 +16,15 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "iTAG-PROP",
+  title: "iTAG",
   description:
     "Inventory Tracking and Property Management System for schools. Encode properties, generate QR codes, and preserve accountability history.",
-  applicationName: "iTAG-PROP",
+  applicationName: "iTAG",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "iTAG-PROP",
+    title: "iTAG",
   },
   icons: {
     icon: "/icons/icon-192.svg",
