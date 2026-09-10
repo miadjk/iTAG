@@ -2,19 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isSchoolHeadHost } from "@/lib/hosts";
 import { isNineDigitPassword } from "@/lib/utils";
-
-type Body = {
-  firstName?: string;
-  middleName?: string;
-  lastName?: string;
-  email?: string;
-  password?: string;
-  regionId?: string;
-  provinceId?: string;
-  municipalityId?: string;
-  districtId?: string;
-  schoolId?: string;
-};
+import { createOrRestoreAccount, type RegisterAccountInput } from "@/lib/register-account";
 
 export async function POST(request: Request) {
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
@@ -22,9 +10,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "School Head registration is only available on the School Head site." }, { status: 403 });
   }
 
-  let body: Body;
+  let body: Partial<RegisterAccountInput>;
   try {
-    body = (await request.json()) as Body;
+    body = (await request.json()) as Partial<RegisterAccountInput>;
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
@@ -48,27 +36,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This school already has a School Head." }, { status: 409 });
   }
 
-  const created = await admin.auth.admin.createUser({
-    email: body.email.trim(),
-    password: body.password,
-    email_confirm: true,
-    user_metadata: {
-      first_name: body.firstName.trim(),
-      middle_name: body.middleName?.trim() ?? "",
-      last_name: body.lastName.trim(),
-      role: "school_head",
-      school_id: body.schoolId,
-      region_id: body.regionId ?? "",
-      province_id: body.provinceId ?? "",
-      municipality_id: body.municipalityId ?? "",
-      district_id: body.districtId ?? "",
-      created_by_admin: "true",
-    },
-  });
-
-  if (created.error) {
-    return NextResponse.json({ error: created.error.message }, { status: 400 });
+  try {
+    await createOrRestoreAccount(
+      admin,
+      {
+        firstName: body.firstName,
+        middleName: body.middleName,
+        lastName: body.lastName,
+        email: body.email,
+        password: body.password,
+        regionId: body.regionId ?? "",
+        provinceId: body.provinceId ?? "",
+        municipalityId: body.municipalityId ?? "",
+        districtId: body.districtId ?? "",
+        schoolId: body.schoolId,
+      },
+      "school_head",
+    );
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unable to register." }, { status: 400 });
   }
-
-  return NextResponse.json({ ok: true });
 }

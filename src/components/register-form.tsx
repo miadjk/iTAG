@@ -7,11 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { LocationFields, type LocationValue } from "@/components/location-fields";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useApp } from "@/lib/app-context";
 import { isNineDigitPassword } from "@/lib/utils";
 
 export function RegisterForm({ schoolHead }: { schoolHead: boolean }) {
-  const { register } = useApp();
   const router = useRouter();
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -55,17 +53,13 @@ export function RegisterForm({ schoolHead }: { schoolHead: boolean }) {
     }
     setLoading(true);
     try {
-      if (schoolHead) {
-        const res = await fetch("/api/register/school-head", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...form, ...location }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Unable to register.");
-      } else {
-        await register({ ...form, ...location, role: "property_custodian" });
-      }
+      const res = await fetch(schoolHead ? "/api/register/school-head" : "/api/register/custodian", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, ...location }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Unable to register.");
       router.push("/login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to register.");
