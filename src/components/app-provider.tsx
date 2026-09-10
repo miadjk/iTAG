@@ -218,12 +218,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     const updated = await client.from("profiles").update(patch).eq("id", user.id);
     throwIfError(updated.error, "Unable to update profile.");
-    if (input.password || (input.email && input.email !== user.email)) {
-      const authUpdate = await client.auth.updateUser({
-        email: input.email ?? user.email,
-        password: input.password,
-      });
+    if (input.password) {
+      const authUpdate = await client.auth.updateUser({ password: input.password });
       if (authUpdate.error) throw new Error(authUpdate.error.message);
+    }
+    if (input.email && input.email !== user.email) {
+      const res = await fetch("/api/admin/update-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: input.email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Unable to update email.");
     }
     await writeAudit("Profile updated", "profile", user.id);
     await refresh();
