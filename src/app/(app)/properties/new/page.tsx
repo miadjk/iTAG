@@ -191,7 +191,7 @@ export default function NewPropertyPage() {
           <Field label="Entity" error={fieldErrors.entityName}>
             <Input value={header.entityName} onChange={(e) => setHeader({ ...header, entityName: e.target.value })} />
           </Field>
-          <Field label="ICSNO" error={fieldErrors.icsNumber}>
+          <Field label="ICSNO." error={fieldErrors.icsNumber}>
             <Input
               value={header.icsNumber}
               onChange={(e) => setHeader({ ...header, icsNumber: e.target.value })}
@@ -230,7 +230,7 @@ export default function NewPropertyPage() {
                 </button>
               ) : null}
             </div>
-            <Field label="ICSNO" error={fieldErrors[`item-${index}-no`]}>
+            <Field label="Item No." error={fieldErrors[`item-${index}-no`]}>
               <Input value={item.inventoryItemNumber} onChange={(e) => setItem(index, { inventoryItemNumber: e.target.value })} />
             </Field>
             <Field label="Description" error={fieldErrors[`item-${index}-desc`]}>
