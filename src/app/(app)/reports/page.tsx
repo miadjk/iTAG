@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/app-context";
 import { classLabel, conditionBadge, propertyStatusBadge, supplyStatusBadge } from "@/components/badges";
 import { Field, Select } from "@/components/ui/field";
@@ -23,8 +24,9 @@ const REPORTS = [
 ] as const;
 
 export default function ReportsPage() {
-  const { schoolProperties, schoolSupplies, state } = useApp();
+  const { schoolProperties, schoolSupplies, state, saveReport } = useApp();
   const [report, setReport] = useState<(typeof REPORTS)[number]>("Complete Property Inventory");
+  const [saving, setSaving] = useState(false);
 
   const content = useMemo(() => {
     if (report === "Low-Value Properties") return schoolProperties.filter((p) => p.classification === "low_value");
@@ -40,6 +42,23 @@ export default function ReportsPage() {
         kicker="Reports"
         title="Inventory reports"
         description="Reports are generated from stored inventory data: properties, supplies, transfers, and custodian history."
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            loading={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await saveReport(report);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            Save report record
+          </Button>
+        }
       />
       <div className="mb-6 max-w-lg">
         <Field label="Report type">
@@ -98,7 +117,7 @@ export default function ReportsPage() {
           <table className="min-w-[800px] w-full border border-[var(--border)] text-sm">
             <thead className="bg-[var(--bg-muted)] text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
               <tr>
-                <th className="p-3 text-left">Property</th>
+                <th className="p-3 text-left">Item No.</th>
                 <th className="p-3 text-left">Class</th>
                 <th className="p-3 text-left">Accountable</th>
                 <th className="p-3 text-left">Location</th>
@@ -109,7 +128,7 @@ export default function ReportsPage() {
             <tbody>
               {(content as typeof schoolProperties).map((p) => (
                 <tr key={p.id} className="border-t border-[var(--border)]">
-                  <td className="p-3">{p.propertyNumber}</td>
+                  <td className="p-3">{p.inventoryItemNumber}</td>
                   <td className="p-3">{classLabel(p.classification)}</td>
                   <td className="p-3">{p.currentAccountablePerson}</td>
                   <td className="p-3">{p.location}</td>

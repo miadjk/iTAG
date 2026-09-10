@@ -28,7 +28,7 @@ export default function TransfersPage() {
             return (
               <article key={t.id} className="surface p-4 text-sm">
                 <Link href={`/properties/${t.propertyId}`} className="text-[#F1E5A1]">
-                  {p?.propertyNumber}
+                  {p?.inventoryItemNumber}
                 </Link>
                 <p className="mt-2">
                   {t.previousAccountablePerson} → {t.newAccountablePerson}

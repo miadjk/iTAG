@@ -50,21 +50,25 @@ export default function AssignmentsPage() {
       {user?.role === "school_head" && can("assign") && open ? (
         <form
           className="surface mb-6 grid gap-4 p-5 md:grid-cols-2"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!form.propertyId || !form.assignedUserId) {
               setFormError("This field is required.");
               return;
             }
-            assignProperty({
-              ...form,
-              accountablePerson:
-                schoolUsers.find((u) => u.id === form.assignedUserId)
-                  ? `${schoolUsers.find((u) => u.id === form.assignedUserId)?.firstName} ${schoolUsers.find((u) => u.id === form.assignedUserId)?.lastName}`
-                  : form.accountablePerson,
-            });
-            setFormError("");
-            setOpen(false);
+            try {
+              await assignProperty({
+                ...form,
+                accountablePerson:
+                  schoolUsers.find((u) => u.id === form.assignedUserId)
+                    ? `${schoolUsers.find((u) => u.id === form.assignedUserId)?.firstName} ${schoolUsers.find((u) => u.id === form.assignedUserId)?.lastName}`
+                    : form.accountablePerson,
+              });
+              setFormError("");
+              setOpen(false);
+            } catch (err) {
+              setFormError(err instanceof Error ? err.message : "Unable to save assignment.");
+            }
           }}
         >
           <Field label="Property">

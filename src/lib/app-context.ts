@@ -36,21 +36,25 @@ export type PropertyInput = Omit<
   | "createdAt"
   | "updatedAt"
   | "totalCost"
-> & { totalCost?: number };
+  | "propertyNumber"
+> & { totalCost?: number; propertyNumber?: string };
 
 export type AppContextValue = {
   ready: boolean;
   state: AppState;
   user: Profile | null;
   login: (identifier: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   updateProfile: (input: Partial<Profile> & { password?: string }) => Promise<void>;
   replaceSchoolHead: (input: RegisterInput) => Promise<void>;
   createCustodian: (input: RegisterInput) => Promise<void>;
-  setCustodianActive: (userId: string, active: boolean) => void;
-  encodeProperty: (input: PropertyInput) => PropertyRecord;
-  updateProperty: (id: string, input: PropertyInput) => void;
+  setCustodianActive: (userId: string, active: boolean) => Promise<void>;
+  encodeProperty: (input: PropertyInput) => Promise<PropertyRecord>;
+  encodeProperties: (inputs: PropertyInput[]) => Promise<PropertyRecord[]>;
+  updateProperty: (id: string, input: PropertyInput) => Promise<void>;
+  deleteProperty: (id: string) => Promise<void>;
+  saveReport: (reportType: string) => Promise<void>;
   assignProperty: (input: {
     propertyId: string;
     accountablePerson: string;
@@ -60,7 +64,7 @@ export type AppContextValue = {
     dateAssigned: string;
     deadline?: string;
     status?: "pending" | "active" | "completed";
-  }) => void;
+  }) => Promise<void>;
   transferProperty: (input: {
     propertyId: string;
     newAccountablePerson: string;
@@ -68,7 +72,7 @@ export type AppContextValue = {
     newLocation: string;
     date: string;
     reason: string;
-  }) => void;
+  }) => Promise<void>;
   verifyProperty: (input: {
     propertyId: string;
     location: string;
@@ -77,12 +81,14 @@ export type AppContextValue = {
     status: PropertyStatus;
     existenceConfirmed: boolean;
     remarks: string;
-  }) => void;
-  upsertSupply: (input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt"> & { id?: string }) => ConsumableSupply;
-  stockIn: (supplyId: string, quantity: number, date: string, reference: string) => void;
-  stockOut: (supplyId: string, quantity: number, date: string, recipient: string, purpose: string) => void;
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
+  }) => Promise<void>;
+  upsertSupply: (
+    input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt"> & { id?: string },
+  ) => Promise<ConsumableSupply>;
+  stockIn: (supplyId: string, quantity: number, date: string, reference: string) => Promise<void>;
+  stockOut: (supplyId: string, quantity: number, date: string, recipient: string, purpose: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   findPropertyByQr: (code: string) => PropertyRecord | undefined;
   schoolProperties: PropertyRecord[];
   schoolSupplies: ConsumableSupply[];

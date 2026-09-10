@@ -63,7 +63,7 @@ export interface Profile {
   lastName: string;
   email: string;
   username?: string;
-  passwordHash: string;
+  passwordHash?: string;
   role: Role;
   schoolId: string | null;
   schoolName?: string;
@@ -241,6 +241,3 @@ export interface AppState {
   generatedForms: GeneratedForm[];
   sessionUserId: string | null;
 }
-
-export const INITIAL_ADMIN_USERNAME = "iTAGPROPAdmin";
-export const INITIAL_ADMIN_PASSWORD = "iTAGPROPAdmin2026";

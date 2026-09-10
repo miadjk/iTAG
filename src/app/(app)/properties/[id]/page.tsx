@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { Download, Pencil, Printer } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -16,7 +17,8 @@ import type { PropertyRecord } from "@/types";
 export default function PropertyDetailPage() {
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
-  const { state, schoolProperties, can, assignProperty, transferProperty, updateProperty, schoolUsers } = useApp();
+  const router = useRouter();
+  const { state, schoolProperties, can, assignProperty, transferProperty, updateProperty, deleteProperty, schoolUsers } = useApp();
   const property = schoolProperties.find((p) => p.id === params.id) ?? state.properties.find((p) => p.id === params.id);
   const [editing, setEditing] = useState(search.get("edit") === "1");
   const created = search.get("created") === "1";
@@ -33,7 +35,7 @@ export default function PropertyDetailPage() {
       <PageHeader
         kicker={scanned ? "Scan result" : created ? "QR and Excel ready" : "Property record"}
         title={scanned ? "Scan result" : property.description}
-        description={property.inventoryItemNumber || property.propertyNumber}
+        description={`Item No. ${property.inventoryItemNumber} · ICSNO ${property.icsNumber}`}
         actions={
           <div className="flex flex-wrap gap-2">
             {can("encode") && !editing ? (
@@ -41,9 +43,27 @@ export default function PropertyDetailPage() {
                 <Pencil className="h-4 w-4" /> Edit
               </Button>
             ) : null}
+            <Link href={`/properties/group/${encodeURIComponent(property.icsNumber)}`}>
+              <Button type="button" variant="secondary">
+                ICSNO group
+              </Button>
+            </Link>
             <Button type="button" variant="secondary" onClick={() => downloadPropertyExcel(property, schoolProperties)}>
-              <Download className="h-4 w-4" /> Download Excel
+              <Download className="h-4 w-4" /> Excel
             </Button>
+            {can("encode") ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={async () => {
+                  if (!window.confirm("Delete this property? History for this item will also be removed.")) return;
+                  await deleteProperty(property.id);
+                  router.push("/properties");
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -54,8 +74,8 @@ export default function PropertyDetailPage() {
             <EditForm
               property={property}
               onCancel={() => setEditing(false)}
-              onSave={(input) => {
-                updateProperty(property.id, input);
+              onSave={async (input) => {
+                await updateProperty(property.id, input);
                 setEditing(false);
               }}
             />
@@ -74,7 +94,7 @@ export default function PropertyDetailPage() {
                 officeDepartment: property.officeDepartment,
                 location: property.location,
               }}
-              onSave={assignProperty}
+              onSave={(input) => assignProperty(input)}
             />
           ) : null}
 
@@ -101,27 +121,8 @@ export default function PropertyDetailPage() {
         </div>
         <aside className="surface h-fit p-5">
           <QrCard property={property} />
-          <Button
-            type="button"
-            variant="secondary"
-            className="mt-3 w-full"
-            onClick={() => {
-              window.print();
-            }}
-          >
-            <Printer className="h-4 w-4" /> Print
-          </Button>
         </aside>
       </div>
-    </div>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 text-sm text-[var(--text)]">{value || "—"}</p>
     </div>
   );
 }
@@ -133,16 +134,16 @@ function EditForm({
 }: {
   property: PropertyRecord;
   onCancel: () => void;
-  onSave: (input: PropertyInput) => void;
+  onSave: (input: PropertyInput) => Promise<void> | void;
 }) {
   const [form, setForm] = useState({ ...property });
   const totalCost = Number(form.quantity || 0) * Number(form.unitCost || 0);
   return (
     <form
       className="surface grid gap-4 p-5 md:grid-cols-2"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        onSave({ ...form, totalCost });
+        await onSave({ ...form, totalCost });
       }}
     >
       <Field label="Entity">
@@ -217,9 +218,9 @@ function AssignForm({
       <h2 className="font-display text-2xl">Assign property</h2>
       <form
         className="mt-4 grid gap-4 md:grid-cols-2"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          onSave({ propertyId, ...form });
+          await onSave({ propertyId, ...form });
         }}
       >
         <Field label="Assign to user">
@@ -270,10 +271,10 @@ function TransferForm({
   return (
     <form
       className="mt-4 grid gap-4 md:grid-cols-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSave({ propertyId, ...form });
-      }}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          await onSave({ propertyId, ...form });
+        }}
     >
       <Field label="New accountable person">
         <Input value={form.newAccountablePerson} onChange={(e) => setForm({ ...form, newAccountablePerson: e.target.value })} />

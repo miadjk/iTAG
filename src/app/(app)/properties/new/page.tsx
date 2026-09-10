@@ -2,86 +2,125 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { CLASSIFICATIONS, useApp } from "@/lib/app-context";
+import { CLASSIFICATIONS, useApp, type PropertyInput } from "@/lib/app-context";
 import { getSchoolName } from "@/lib/locations";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, normalizeKey } from "@/lib/utils";
+
+type ItemDraft = {
+  inventoryItemNumber: string;
+  description: string;
+  quantity: number;
+  unitOfMeasure: string;
+  dateAcquired: string;
+  unitCost: number;
+  fundSource: string;
+  custodianLastUser: string;
+  estimatedUsefulLife: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  remarks: string;
+};
+
+function emptyItem(): ItemDraft {
+  return {
+    inventoryItemNumber: "",
+    description: "",
+    quantity: 1,
+    unitOfMeasure: "Unit",
+    dateAcquired: "",
+    unitCost: 0,
+    fundSource: "",
+    custodianLastUser: "",
+    estimatedUsefulLife: "",
+    brand: "",
+    model: "",
+    serialNumber: "",
+    remarks: "",
+  };
+}
 
 export default function NewPropertyPage() {
-  const { encodeProperty, can, user } = useApp();
+  const { encodeProperties, can, user, schoolProperties } = useApp();
   const router = useRouter();
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const schoolName = getSchoolName(user?.schoolId) || user?.schoolName || "";
-  const [form, setForm] = useState({
+  const [header, setHeader] = useState({
     classification: "low_value" as const,
     entityName: schoolName,
     fundCluster: "",
     icsNumber: "",
-    inventoryItemNumber: "",
-    propertyNumber: "",
-    description: "",
-    quantity: 1,
-    unitOfMeasure: "Unit",
-    dateAcquired: "",
-    acquisitionReference: "",
-    unitCost: 0,
-    fundSource: "",
-    custodianLastUser: "",
-    currentAccountablePerson: "",
-    officeDepartment: "",
     location: schoolName,
-    estimatedUsefulLife: "",
+    officeDepartment: "",
     condition: "serviceable" as const,
-    status: "active" as const,
-    remarks: "",
-    brand: "",
-    model: "",
-    serialNumber: "",
-    warranty: "",
+    status: "idle" as const,
   });
+  const [items, setItems] = useState<ItemDraft[]>([emptyItem()]);
 
-  const totalCost = useMemo(() => Number(form.quantity || 0) * Number(form.unitCost || 0), [form.quantity, form.unitCost]);
+  const existingGroup = useMemo(() => {
+    const ics = normalizeKey(header.icsNumber);
+    if (!ics) return [];
+    return schoolProperties.filter((p) => normalizeKey(p.icsNumber).toLowerCase() === ics.toLowerCase());
+  }, [header.icsNumber, schoolProperties]);
 
   useEffect(() => {
     if (!schoolName) return;
-    setForm((prev) => {
-      if (prev.entityName && prev.entityName !== schoolName && prev.location && prev.location !== schoolName) {
-        return prev;
-      }
-      return {
-        ...prev,
-        entityName: prev.entityName || schoolName,
-        location: prev.location || schoolName,
-      };
-    });
+    setHeader((prev) => ({
+      ...prev,
+      entityName: prev.entityName || schoolName,
+      location: prev.location || schoolName,
+    }));
   }, [schoolName]);
+
+  useEffect(() => {
+    if (!existingGroup.length) return;
+    const first = existingGroup[0];
+    setHeader((prev) => ({
+      ...prev,
+      entityName: prev.entityName || first.entityName,
+      fundCluster: prev.fundCluster || first.fundCluster,
+      location: prev.location || first.location,
+      officeDepartment: prev.officeDepartment || first.officeDepartment,
+      classification: prev.classification || first.classification,
+    }));
+  }, [existingGroup]);
 
   if (!can("encode")) {
     return <p className="text-sm text-[var(--text-muted)]">Property encoding is performed by the Property Custodian.</p>;
   }
 
-  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  function setItem(index: number, patch: Partial<ItemDraft>) {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
-    if (!form.entityName.trim()) next.entityName = "This field is required.";
-    if (!form.icsNumber.trim()) next.icsNumber = "This field is required.";
-    if (!form.inventoryItemNumber.trim()) next.inventoryItemNumber = "This field is required.";
-    if (!form.description.trim()) next.description = "This field is required.";
-    if (!form.dateAcquired) next.dateAcquired = "This field is required.";
-    if (!form.unitOfMeasure.trim()) next.unitOfMeasure = "This field is required.";
-    if (!form.quantity || form.quantity <= 0) next.quantity = "Enter a valid quantity.";
-    if (form.unitCost < 0) next.unitCost = "Enter a valid unit cost.";
-    if (!form.custodianLastUser.trim()) next.custodianLastUser = "This field is required.";
-    if (!form.fundSource.trim()) next.fundSource = "This field is required.";
-    if (!form.estimatedUsefulLife.trim()) next.estimatedUsefulLife = "This field is required.";
+    if (!header.entityName.trim()) next.entityName = "This field is required.";
+    if (!header.icsNumber.trim()) next.icsNumber = "This field is required.";
+    items.forEach((item, index) => {
+      if (!item.inventoryItemNumber.trim()) next[`item-${index}-no`] = "This field is required.";
+      if (!item.description.trim()) next[`item-${index}-desc`] = "This field is required.";
+      if (!item.dateAcquired) next[`item-${index}-date`] = "This field is required.";
+      if (!item.unitOfMeasure.trim()) next[`item-${index}-unit`] = "This field is required.";
+      if (!item.quantity || item.quantity <= 0) next[`item-${index}-qty`] = "Enter a valid quantity.";
+      if (item.unitCost < 0) next[`item-${index}-cost`] = "Enter a valid unit cost.";
+      if (!item.custodianLastUser.trim()) next[`item-${index}-custodian`] = "This field is required.";
+      if (!item.fundSource.trim()) next[`item-${index}-fund`] = "This field is required.";
+      if (!item.estimatedUsefulLife.trim()) next[`item-${index}-life`] = "This field is required.";
+    });
+    const seen = new Set<string>();
+    items.forEach((item, index) => {
+      const key = item.inventoryItemNumber.trim().toLowerCase();
+      if (key && seen.has(key)) next[`item-${index}-no`] = "Duplicate Item No. in this form.";
+      seen.add(key);
+    });
     setFieldErrors(next);
     if (Object.keys(next).length) {
       setError("Please complete the highlighted fields.");
@@ -93,13 +132,35 @@ export default function NewPropertyPage() {
     }
     setLoading(true);
     try {
-      const record = encodeProperty({
-        ...form,
-        propertyNumber: form.propertyNumber.trim() || form.inventoryItemNumber.trim(),
-        currentAccountablePerson: form.currentAccountablePerson || form.custodianLastUser,
-        totalCost,
-      });
-      router.push(`/properties/${record.id}?created=1`);
+      const payload: PropertyInput[] = items.map((item) => ({
+        classification: header.classification,
+        entityName: header.entityName.trim(),
+        fundCluster: header.fundCluster,
+        icsNumber: header.icsNumber.trim(),
+        inventoryItemNumber: item.inventoryItemNumber.trim(),
+        description: item.description.trim(),
+        quantity: item.quantity,
+        unitOfMeasure: item.unitOfMeasure,
+        dateAcquired: item.dateAcquired,
+        acquisitionReference: "",
+        unitCost: item.unitCost,
+        totalCost: item.quantity * item.unitCost,
+        fundSource: item.fundSource,
+        custodianLastUser: item.custodianLastUser,
+        currentAccountablePerson: item.custodianLastUser,
+        officeDepartment: header.officeDepartment,
+        location: header.location,
+        estimatedUsefulLife: item.estimatedUsefulLife,
+        condition: header.condition,
+        status: header.status,
+        remarks: item.remarks,
+        brand: item.brand,
+        model: item.model,
+        serialNumber: item.serialNumber,
+        warranty: "",
+      }));
+      const created = await encodeProperties(payload);
+      router.push(`/properties/group/${encodeURIComponent(header.icsNumber.trim())}?created=${created.length}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save property.");
       setLoading(false);
@@ -111,12 +172,15 @@ export default function NewPropertyPage() {
       <PageHeader
         kicker="My properties"
         title="Add property"
-        description="Saving generates a unique QR code and fills the Excel template for this property."
+        description="Items that share an ICSNO stay in one group. Each item still gets its own QR code and can be exported together as Excel."
       />
       <form onSubmit={onSubmit} noValidate className="space-y-8">
         <section className="surface grid gap-4 p-5 md:grid-cols-2">
           <Field label="Classification">
-            <Select value={form.classification} onChange={(e) => set("classification", e.target.value as typeof form.classification)}>
+            <Select
+              value={header.classification}
+              onChange={(e) => setHeader({ ...header, classification: e.target.value as typeof header.classification })}
+            >
               {CLASSIFICATIONS.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -125,53 +189,88 @@ export default function NewPropertyPage() {
             </Select>
           </Field>
           <Field label="Entity" error={fieldErrors.entityName}>
-            <Input value={form.entityName} onChange={(e) => set("entityName", e.target.value)} />
+            <Input value={header.entityName} onChange={(e) => setHeader({ ...header, entityName: e.target.value })} />
           </Field>
-          <Field label="ICS No." error={fieldErrors.icsNumber}>
-            <Input value={form.icsNumber} onChange={(e) => set("icsNumber", e.target.value)} />
-          </Field>
-          <Field label="Item No." error={fieldErrors.inventoryItemNumber}>
-            <Input value={form.inventoryItemNumber} onChange={(e) => set("inventoryItemNumber", e.target.value)} />
-          </Field>
-          <Field label="Property number">
-            <Input value={form.propertyNumber} onChange={(e) => set("propertyNumber", e.target.value)} placeholder="Defaults to Item No." />
-          </Field>
-          <div className="md:col-span-2">
-            <Field label="Description" error={fieldErrors.description}>
-              <Input value={form.description} onChange={(e) => set("description", e.target.value)} />
-            </Field>
-          </div>
-          <Field label="Date acquired" error={fieldErrors.dateAcquired}>
-            <Input type="date" value={form.dateAcquired} onChange={(e) => set("dateAcquired", e.target.value)} />
-          </Field>
-          <Field label="Unit measure" error={fieldErrors.unitOfMeasure}>
-            <Input value={form.unitOfMeasure} onChange={(e) => set("unitOfMeasure", e.target.value)} />
-          </Field>
-          <Field label="Quantity" error={fieldErrors.quantity}>
-            <Input type="number" min={1} value={form.quantity} onChange={(e) => set("quantity", Number(e.target.value))} />
-          </Field>
-          <Field label="Unit cost" error={fieldErrors.unitCost}>
-            <Input type="number" min={0} step="0.01" value={form.unitCost} onChange={(e) => set("unitCost", Number(e.target.value))} />
-          </Field>
-          <Field label="Total cost">
-            <Input value={formatMoney(totalCost)} readOnly />
-          </Field>
-          <Field label="Custodian / last user" error={fieldErrors.custodianLastUser}>
-            <Input value={form.custodianLastUser} onChange={(e) => set("custodianLastUser", e.target.value)} />
-          </Field>
-          <Field label="Fund source" error={fieldErrors.fundSource}>
-            <Input value={form.fundSource} onChange={(e) => set("fundSource", e.target.value)} />
-          </Field>
-          <Field label="Useful life" error={fieldErrors.estimatedUsefulLife}>
-            <Input value={form.estimatedUsefulLife} onChange={(e) => set("estimatedUsefulLife", e.target.value)} />
+          <Field label="ICSNO" error={fieldErrors.icsNumber}>
+            <Input
+              value={header.icsNumber}
+              onChange={(e) => setHeader({ ...header, icsNumber: e.target.value })}
+              placeholder="e.g. 2026-001"
+            />
           </Field>
           <Field label="Fund cluster">
-            <Input value={form.fundCluster} onChange={(e) => set("fundCluster", e.target.value)} />
+            <Input value={header.fundCluster} onChange={(e) => setHeader({ ...header, fundCluster: e.target.value })} />
+          </Field>
+          <Field label="Location">
+            <Input value={header.location} onChange={(e) => setHeader({ ...header, location: e.target.value })} />
+          </Field>
+          <Field label="Office / department">
+            <Input value={header.officeDepartment} onChange={(e) => setHeader({ ...header, officeDepartment: e.target.value })} />
           </Field>
         </section>
+
+        {existingGroup.length ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            ICSNO {existingGroup[0].icsNumber} already has {existingGroup.length} item
+            {existingGroup.length === 1 ? "" : "s"}. New items will be added to that group.
+          </p>
+        ) : null}
+
+        {items.map((item, index) => (
+          <section key={index} className="surface grid gap-4 p-5 md:grid-cols-2">
+            <div className="flex items-center justify-between md:col-span-2">
+              <h2 className="font-display text-2xl">Item {index + 1}</h2>
+              {items.length > 1 ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[var(--text-muted)]"
+                  onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  <Trash2 className="h-4 w-4" /> Remove
+                </button>
+              ) : null}
+            </div>
+            <Field label="Item No." error={fieldErrors[`item-${index}-no`]}>
+              <Input value={item.inventoryItemNumber} onChange={(e) => setItem(index, { inventoryItemNumber: e.target.value })} />
+            </Field>
+            <Field label="Description" error={fieldErrors[`item-${index}-desc`]}>
+              <Input value={item.description} onChange={(e) => setItem(index, { description: e.target.value })} />
+            </Field>
+            <Field label="Date acquired" error={fieldErrors[`item-${index}-date`]}>
+              <Input type="date" value={item.dateAcquired} onChange={(e) => setItem(index, { dateAcquired: e.target.value })} />
+            </Field>
+            <Field label="Unit measure" error={fieldErrors[`item-${index}-unit`]}>
+              <Input value={item.unitOfMeasure} onChange={(e) => setItem(index, { unitOfMeasure: e.target.value })} />
+            </Field>
+            <Field label="Quantity" error={fieldErrors[`item-${index}-qty`]}>
+              <Input type="number" min={1} value={item.quantity} onChange={(e) => setItem(index, { quantity: Number(e.target.value) })} />
+            </Field>
+            <Field label="Unit cost" error={fieldErrors[`item-${index}-cost`]}>
+              <Input type="number" min={0} step="0.01" value={item.unitCost} onChange={(e) => setItem(index, { unitCost: Number(e.target.value) })} />
+            </Field>
+            <Field label="Total cost">
+              <Input readOnly value={formatMoney(item.quantity * item.unitCost)} />
+            </Field>
+            <Field label="Custodian / last user" error={fieldErrors[`item-${index}-custodian`]}>
+              <Input value={item.custodianLastUser} onChange={(e) => setItem(index, { custodianLastUser: e.target.value })} />
+            </Field>
+            <Field label="Fund source" error={fieldErrors[`item-${index}-fund`]}>
+              <Input value={item.fundSource} onChange={(e) => setItem(index, { fundSource: e.target.value })} />
+            </Field>
+            <Field label="Useful life" error={fieldErrors[`item-${index}-life`]}>
+              <Input value={item.estimatedUsefulLife} onChange={(e) => setItem(index, { estimatedUsefulLife: e.target.value })} />
+            </Field>
+          </section>
+        ))}
+
+        <div className="flex flex-wrap gap-3">
+          <Button type="button" variant="secondary" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
+            <Plus className="h-4 w-4" /> Add another item
+          </Button>
+        </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <Button type="submit" loading={loading}>
-          Save property
+          Save {items.length > 1 ? "properties" : "property"}
         </Button>
       </form>
     </div>

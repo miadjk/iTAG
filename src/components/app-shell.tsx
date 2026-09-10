@@ -106,8 +106,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </p>
           <button
             type="button"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.replace("/login");
             }}
             className="mt-4 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[var(--sidebar-muted)] hover:text-[#F1E5A1]"

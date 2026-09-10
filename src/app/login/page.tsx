@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useApp } from "@/lib/app-context";
-import { INITIAL_ADMIN_PASSWORD, INITIAL_ADMIN_USERNAME } from "@/types";
 
 export default function LoginPage() {
   const { login, user } = useApp();
@@ -49,17 +48,17 @@ export default function LoginPage() {
             <span className="block text-[#8a7310] dark:text-[#F1E5A1]">without losing history.</span>
           </h1>
           <p className="mt-6 max-w-md text-sm text-[var(--text-muted)]">
-            Encode school properties, generate QR labels and fill the Excel template automatically, then assign and transfer while keeping every custodian on record.
+            Encode school properties, generate QR labels and Excel files, then assign and transfer while keeping every custodian on record.
           </p>
         </div>
         <form onSubmit={onSubmit} noValidate className="surface p-6 sm:p-8">
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Sign in</p>
           <h2 className="font-display mt-2 text-3xl">Enter the system</h2>
           <div className="mt-6 space-y-4">
-            <Field label="DepEd email or username">
+            <Field label="DepEd email">
               <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="username" />
             </Field>
-            <Field label="Password" hint="Custodian passwords are 9 digits. Initial School Head setup uses the documented credentials.">
+            <Field label="Password" hint="Custodian passwords are 9 digits.">
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </Field>
             {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
@@ -72,9 +71,6 @@ export default function LoginPage() {
             <Link href="/register" className="text-[#F1E5A1]">
               Create an account
             </Link>
-          </p>
-          <p className="mt-4 text-[11px] text-[var(--text-muted)]">
-            Initial School Head: {INITIAL_ADMIN_USERNAME} / {INITIAL_ADMIN_PASSWORD}
           </p>
         </form>
       </div>

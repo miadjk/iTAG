@@ -12,7 +12,6 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.57.4",
     "exceljs": "^4.4.0",
-    "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.544.0",
     "next": "^15.5.4",
     "qrcode": "^1.5.4",

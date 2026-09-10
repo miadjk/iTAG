@@ -28,6 +28,13 @@ export function formatDate(value?: string | null) {
   }).format(date);
 }
 
+export function formatLongDate(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(date);
+}
+
 export function formatMoney(value: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -41,4 +48,14 @@ export function displayName(person: {
   lastName: string;
 }) {
   return [person.firstName, person.middleName, person.lastName].filter(Boolean).join(" ");
+}
+
+export function deriveSupplyStatus(quantity: number, minimum: number) {
+  if (quantity <= 0) return "out_of_stock" as const;
+  if (quantity <= minimum) return "low_stock" as const;
+  return "available" as const;
+}
+
+export function normalizeKey(value: string) {
+  return value.trim().replace(/\s+/g, " ");
 }

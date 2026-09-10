@@ -30,7 +30,7 @@ export default function DashboardPage() {
         description={
           user.role === "school_head"
             ? "Monitor inventory, assignments, transfers, reports, and system activity. Encoding remains with the Property Custodian."
-            : "Encode properties, generate QR and Excel templates, assign, transfer, and keep supplies current."
+            : "Encode properties, generate QR codes and Excel files, assign, transfer, and keep supplies current."
         }
       />
 
