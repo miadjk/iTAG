@@ -165,7 +165,7 @@ export default function ReportsPage() {
         </Field>
       </div>
 
-      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mb-4 break-words text-sm text-red-700">{error}</p> : null}
 
       {report.includes("Stock-In") || report.includes("Stock-Out") ? (
         <div className="space-y-2">
@@ -198,9 +198,9 @@ export default function ReportsPage() {
       ) : report.includes("Supplies") || report.includes("Low-Stock") ? (
         <div className="space-y-2">
           {(content as typeof schoolSupplies).map((s) => (
-            <div key={s.id} className="surface flex items-center justify-between p-4">
-              <div>
-                <p>{s.name}</p>
+            <div key={s.id} className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="break-words">{s.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {s.currentQuantity} {s.unit}
                 </p>
@@ -210,9 +210,9 @@ export default function ReportsPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-[900px] w-full border border-[var(--border)] text-sm">
-            <thead className="bg-[var(--bg-muted)] text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Property report table">
+          <table className="w-full text-sm">
+            <thead className="bg-[#FDF4D2] text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
               <tr>
                 <th className="p-3 text-left">ICSNO.</th>
                 <th className="p-3 text-left">Item No.</th>

@@ -63,11 +63,11 @@ export default function IcsGroupPage() {
           </div>
         }
       />
-      {excelError ? <p className="mb-4 text-sm text-red-600">{excelError}</p> : null}
+      {excelError ? <p className="mb-4 break-words text-sm text-red-700">{excelError}</p> : null}
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {items.map((property) => (
-          <article key={property.id} className="grid gap-4 lg:grid-cols-[1fr_240px]">
+          <article key={property.id} className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_240px]">
             <ScanResult property={property} title={property.inventoryItemNumber} />
             <div className="surface h-fit p-4">
               <div className="flex flex-wrap gap-2">
@@ -93,8 +93,8 @@ export default function IcsGroupPage() {
       </div>
 
       {qrProperty ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="surface w-full max-w-sm p-5">
+        <div className="modal-overlay" onClick={() => setQrId(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <QrCard property={qrProperty} />
             <Button type="button" variant="secondary" className="mt-4 w-full" onClick={() => setQrId(null)}>
               Close

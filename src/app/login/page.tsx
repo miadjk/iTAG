@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useApp } from "@/lib/app-context";
 import { isSchoolHeadHost } from "@/lib/hosts";
 
@@ -41,25 +40,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--bg)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(241,229,161,0.12),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(241,229,161,0.08),transparent_28%)]" />
-      <div className="relative mx-auto grid min-h-screen w-full max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-2">
-        <div>
-          <div className="mb-8 flex items-center justify-between lg:justify-start lg:gap-4">
-            <p className="text-[11px] uppercase tracking-[0.32em] text-[#8a7310] dark:text-[#F1E5A1]">iTAG-PROP</p>
-            <ThemeToggle />
+    <div className="relative min-h-screen min-h-dvh overflow-x-clip bg-[#FFFFFF]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(149,100,221,0.1),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(253,244,210,0.9),transparent_45%)]" />
+      <div className="relative mx-auto grid min-h-screen min-h-dvh w-full max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-2 lg:gap-10">
+        <div className="min-w-0">
+          <div className="mb-6 flex items-center justify-start sm:mb-8">
+            <p className="text-[11px] uppercase tracking-[0.32em] text-[#5e2fb0]">iTAG-PROP</p>
           </div>
-          <h1 className="font-display text-5xl leading-[0.92] sm:text-7xl">
+          <h1 className="font-display break-words text-4xl leading-[1.02] sm:text-6xl lg:text-7xl lg:leading-[0.92]">
             Inventory tracking
-            <span className="block text-[#8a7310] dark:text-[#F1E5A1]">without losing history.</span>
+            <span className="block text-[#9564DD]">without losing history.</span>
           </h1>
-          <p className="mt-6 max-w-md text-sm text-[var(--text-muted)]">
+          <p className="mt-5 max-w-md break-words text-sm text-[var(--text-muted)] sm:mt-6">
             Encode school properties, generate QR labels and Excel files, then assign and transfer while keeping every custodian on record.
           </p>
         </div>
-        <form onSubmit={onSubmit} noValidate className="surface p-6 sm:p-8">
+        <form onSubmit={onSubmit} noValidate className="surface w-full p-5 sm:p-8">
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Sign in</p>
-          <h2 className="font-display mt-2 text-3xl">Enter the system</h2>
+          <h2 className="font-display mt-2 break-words text-2xl sm:text-3xl">Enter the system</h2>
           <div className="mt-6 space-y-4">
             <Field label="DepEd email">
               <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="username" />
@@ -67,14 +65,14 @@ export default function LoginPage() {
             <Field label="Password" hint="Passwords are 9 digits.">
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </Field>
-            {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
+            {error ? <p className="break-words text-sm text-red-700">{error}</p> : null}
             <Button type="submit" className="w-full" loading={loading}>
               Sign in
             </Button>
           </div>
-          <p className="mt-6 text-xs text-[var(--text-muted)]">
+          <p className="mt-6 break-words text-xs text-[var(--text-muted)]">
             {schoolHeadHost ? "School Head? " : "Property Custodian? "}
-            <Link href="/register" className="text-[#F1E5A1]">
+            <Link href="/register" className="font-medium text-[#5e2fb0] underline-offset-4 hover:text-[#9564DD] hover:underline">
               Create an account
             </Link>
           </p>

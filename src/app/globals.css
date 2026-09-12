@@ -1,47 +1,49 @@
 @import "tailwindcss";
 
 @theme {
-  --color-accent: #f1e5a1;
-  --color-accent-dim: #cfc48a;
+  --color-brand: #9564dd;
+  --color-brand-dark: #7a4cc4;
+  --color-brand-ink: #5e2fb0;
+  --color-accent: #fdf4d2;
+  --color-accent-border: #eadfae;
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
 }
 
 :root {
-  --bg: #f6f4ec;
+  --bg: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-muted: #eee9d8;
-  --bg-sidebar: #f3efe2;
-  --sidebar-text: #111111;
-  --sidebar-muted: #3f3f3f;
-  --text: #111111;
-  --text-muted: #3f3f3f;
-  --border: #cfc9b4;
-  --ring: #f1e5a1;
+  --bg-muted: #fdf4d2;
+  --bg-soft: #fffdf3;
+  --bg-sidebar: #ffffff;
+  --sidebar-text: #1a1a1e;
+  --sidebar-muted: #5f5b6b;
+  --text: #1a1a1e;
+  --text-muted: #5f5b6b;
+  --border: #e7dfc2;
+  --border-strong: #d6cba0;
+  --ring: #9564dd;
+  --brand: #9564dd;
+  --brand-dark: #7a4cc4;
+  --brand-ink: #5e2fb0;
+  --accent: #fdf4d2;
   --inverse: #ffffff;
-}
-
-html.dark {
-  --bg: #0b0b0b;
-  --bg-elevated: #141414;
-  --bg-muted: #1c1c1c;
-  --bg-sidebar: #101010;
-  --sidebar-text: #f7f4ea;
-  --sidebar-muted: #c4c0b4;
-  --text: #f7f4ea;
-  --text-muted: #c4c0b4;
-  --border: #2a2a2a;
-  --ring: #f1e5a1;
-  --inverse: #0b0b0b;
+  color-scheme: light;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+}
+
 html,
 body {
   min-height: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -49,6 +51,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-mono), ui-monospace, monospace;
+  min-width: 0;
 }
 
 h1,
@@ -57,11 +60,24 @@ h3,
 .font-display {
   font-family: var(--font-display), ui-serif, Georgia, serif;
   letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  overflow-wrap: break-word;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 ::selection {
-  background: #f1e5a1;
-  color: #111;
+  background: #9564dd;
+  color: #ffffff;
 }
 
 :focus-visible {
@@ -81,21 +97,22 @@ h3,
 }
 
 option {
-  color: #111111;
+  color: #1a1a1e;
   background: #ffffff;
-}
-
-html.light {
-  color-scheme: light;
-}
-
-html.dark {
-  color-scheme: dark;
 }
 
 .surface {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  min-width: 0;
+}
+
+.surface-accent {
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  min-width: 0;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -104,6 +121,131 @@ html.dark {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-strong);
   border-radius: 999px;
+}
+
+/* ---------- Mobile-first responsive foundation ---------- */
+
+main,
+section,
+article,
+form,
+header,
+aside,
+div {
+  min-width: 0;
+}
+
+/* Prevent iOS auto-zoom on inputs while keeping desktop sizes */
+input,
+select,
+textarea {
+  font-size: 16px;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 0.875rem;
+  }
+}
+
+/* Touch-friendly controls on coarse pointers */
+@media (pointer: coarse) {
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+  }
+
+  button.inline-flex,
+  a.inline-flex {
+    min-height: 40px;
+  }
+}
+
+/* Fluid display headings: readable at 320px, composed on desktop */
+.font-display {
+  line-height: 1.05;
+}
+
+/* Tables: always scroll inside their container, never push the page */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: #ffffff;
+  max-width: 100%;
+}
+
+.table-scroll > table {
+  min-width: 720px;
+}
+
+.table-scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Dialogs / modals fit small screens */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(26 26 30 / 0.5);
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+  .modal-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 28rem;
+  max-height: min(92dvh, 720px);
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+/* Long tokens / QR payloads wrap instead of overflowing */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Clamp page gutters so 320px screens keep breathing room */
+.page-pad {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-pad {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-pad {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { LocationFields, type LocationValue } from "@/components/location-fields";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { isNineDigitPassword } from "@/lib/utils";
 
 export function RegisterForm({ schoolHead }: { schoolHead: boolean }) {
@@ -69,24 +68,23 @@ export function RegisterForm({ schoolHead }: { schoolHead: boolean }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] px-4 py-10 text-[var(--text)]">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <Link href="/login" className="text-[11px] uppercase tracking-[0.18em] text-[#8a7310] dark:text-[#F1E5A1]">
+    <div className="min-h-screen min-h-dvh bg-[#FFFFFF] px-4 py-8 text-[var(--text)] sm:py-10">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="mb-6 flex items-center justify-start">
+          <Link href="/login" className="inline-flex min-h-11 items-center rounded-lg px-2 text-[11px] uppercase tracking-[0.18em] text-[#5e2fb0] hover:bg-[#FDF4D2] hover:text-[#9564DD]">
             Back to sign in
           </Link>
-          <ThemeToggle />
         </div>
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[#8a7310] dark:text-[#F1E5A1]">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[#5e2fb0]">
           {schoolHead ? "School Head" : "Property Custodian"}
         </p>
-        <h1 className="font-display mt-2 text-5xl">Create account</h1>
+        <h1 className="font-display mt-2 break-words text-4xl sm:text-5xl">Create account</h1>
         <p className="mt-3 text-sm text-[var(--text-muted)]">
           {schoolHead
             ? "School Head registration is separate from Property Custodian accounts. Choose the school you will oversee."
             : "Registration uses cascading location selection: Region → Province → Municipality → Direction/District → School."}
         </p>
-        <form onSubmit={onSubmit} noValidate className="surface mt-8 space-y-8 p-6">
+        <form onSubmit={onSubmit} noValidate className="surface mt-6 space-y-6 p-5 sm:mt-8 sm:space-y-8 sm:p-6">
           <section className="space-y-4">
             <h2 className="font-display text-2xl">Personal information</h2>
             <div className="grid gap-4 md:grid-cols-3">

@@ -46,7 +46,7 @@ export default function PropertiesPage() {
       />
 
       <form
-        className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto]"
+        className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]"
         onSubmit={(e) => {
           e.preventDefault();
         }}
@@ -59,12 +59,12 @@ export default function PropertiesPage() {
           />
         </Field>
         <div className="flex items-end">
-          <Button type="submit" variant="secondary">
+          <Button type="submit" variant="secondary" className="w-full sm:w-auto">
             <Search className="h-4 w-4" /> Search
           </Button>
         </div>
       </form>
-      {excelError ? <p className="mb-4 text-sm text-red-600">{excelError}</p> : null}
+      {excelError ? <p className="mb-4 break-words text-sm text-red-700">{excelError}</p> : null}
 
       {query.trim() ? (
         <SearchResults result={result} canEncode={can("encode")} onQr={setQrId} onExcel={downloadGroup} />
@@ -106,17 +106,17 @@ export default function PropertiesPage() {
               </div>
               <ul className="mt-4 space-y-2 text-sm">
                 {group.properties.map((p) => (
-                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-2">
-                    <span>
+                  <li key={p.id} className="flex flex-col gap-2 border-t border-[var(--border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <span className="min-w-0 break-words">
                       <span className="text-[var(--text-muted)]">{p.inventoryItemNumber}</span>
                       <span className="mx-2">·</span>
                       {p.description}
                     </span>
-                    <span className="flex gap-3">
-                      <button type="button" className="inline-flex items-center gap-1 text-xs uppercase tracking-widest" onClick={() => setQrId(p.id)}>
+                    <span className="flex flex-wrap gap-2">
+                      <button type="button" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FDF4D2] hover:text-[#9564DD]" onClick={() => setQrId(p.id)}>
                         <QrCode className="h-3.5 w-3.5" /> QR
                       </button>
-                      <Link href={`/properties/${p.id}`} className="inline-flex items-center gap-1 text-xs uppercase tracking-widest">
+                      <Link href={`/properties/${p.id}`} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FDF4D2] hover:text-[#9564DD]">
                         <Eye className="h-3.5 w-3.5" /> View
                       </Link>
                     </span>
@@ -129,8 +129,8 @@ export default function PropertiesPage() {
       )}
 
       {qrProperty ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="surface w-full max-w-sm p-5">
+        <div className="modal-overlay" onClick={() => setQrId(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <QrCard property={qrProperty} />
             <Button type="button" variant="secondary" className="mt-4 w-full" onClick={() => setQrId(null)}>
               Close

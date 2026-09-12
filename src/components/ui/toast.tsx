@@ -17,23 +17,28 @@ export function ToastHost({
   onDismiss: (id: string) => void;
 }) {
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
+    <div className="pointer-events-none fixed inset-x-3 bottom-3 z-[80] flex flex-col gap-2 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[min(92vw,380px)]">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto flex gap-3 border border-[var(--border)] bg-[var(--bg-elevated)] p-3 shadow-xl"
+          className="pointer-events-auto flex gap-3 rounded-xl border border-[var(--border)] bg-[#FFFFFF] p-3 shadow-xl"
           role="status"
         >
           {toast.tone === "error" ? (
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
           ) : (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#F1E5A1]" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#9564DD]" />
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-wide">{toast.title}</p>
-            {toast.body ? <p className="mt-1 text-xs text-[var(--text-muted)]">{toast.body}</p> : null}
+            <p className="break-words text-xs uppercase tracking-wide">{toast.title}</p>
+            {toast.body ? <p className="mt-1 break-words text-xs text-[var(--text-muted)]">{toast.body}</p> : null}
           </div>
-          <button type="button" onClick={() => onDismiss(toast.id)} className="text-[var(--text-muted)]" aria-label="Dismiss">
+          <button
+            type="button"
+            onClick={() => onDismiss(toast.id)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[#FDF4D2] hover:text-[#9564DD]"
+            aria-label="Dismiss"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -49,7 +49,7 @@ export default function AssignmentsPage() {
 
       {user?.role === "school_head" && can("assign") && open ? (
         <form
-          className="surface mb-6 grid gap-4 p-5 md:grid-cols-2"
+          className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
           onSubmit={async (e) => {
             e.preventDefault();
             if (!form.propertyId || !form.assignedUserId) {
@@ -99,8 +99,8 @@ export default function AssignmentsPage() {
           <Field label="Deadline">
             <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
           </Field>
-          {formError ? <p className="text-sm text-red-600 md:col-span-2">{formError}</p> : null}
-          <Button type="submit">Save assignment</Button>
+          {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
+          <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
         </form>
       ) : null}
 
@@ -114,8 +114,8 @@ export default function AssignmentsPage() {
             return (
               <article key={a.id} className="surface p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <Link href={`/properties/${a.propertyId}`} className="text-sm text-[#8a7310] dark:text-[#F1E5A1]">
+                  <div className="min-w-0">
+                    <Link href={`/properties/${a.propertyId}`} className="break-words text-sm font-medium text-[#5e2fb0] hover:text-[#9564DD] hover:underline">
                       {p?.description || "Property"}
                     </Link>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">

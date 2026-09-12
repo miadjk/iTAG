@@ -9,13 +9,12 @@ export function ScanResult({
 }) {
   const lines = propertyScanLines(property);
   return (
-    <section className="surface overflow-hidden p-5">
-      <h2 className="font-display text-3xl">{title}</h2>
-      <div className="mt-5 space-y-1.5 text-sm leading-relaxed text-[var(--text)]">
+    <section className="surface overflow-hidden p-4 sm:p-5">
+      <h2 className="font-display break-words text-2xl sm:text-3xl">{title}</h2>
+      <div className="mt-4 space-y-1.5 text-sm leading-relaxed text-[var(--text)] sm:mt-5">
         {lines.map(([label, value]) => (
           <p key={label} className="break-words">
-            <span className="font-medium">{label}:</span>
-            {value || "—"}
+            <span className="font-medium">{label}:</span> {value || "—"}
           </p>
         ))}
       </div>

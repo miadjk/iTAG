@@ -41,7 +41,7 @@ export default function SuppliesPage() {
 
       {can("supplies") && open ? (
         <form
-          className="surface mb-6 grid gap-4 p-5 md:grid-cols-2"
+          className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             upsertSupply(form);
@@ -71,7 +71,7 @@ export default function SuppliesPage() {
               <Textarea value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
             </Field>
           </div>
-          <Button type="submit">Save supply</Button>
+          <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save supply</Button>
         </form>
       ) : null}
 
@@ -82,8 +82,8 @@ export default function SuppliesPage() {
           {schoolSupplies.map((s) => (
             <article key={s.id} className="surface p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm uppercase tracking-widest">{s.name}</h2>
+                <div className="min-w-0">
+                  <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     {s.currentQuantity} {s.unit} · min {s.minimumStockLevel} · {s.location || "No location"}
                   </p>
@@ -97,7 +97,7 @@ export default function SuppliesPage() {
 
       {can("supplies") && schoolSupplies.length > 0 ? (
         <form
-          className="surface mt-8 grid gap-4 p-5 md:grid-cols-2"
+          className="surface mt-8 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             setError("");
@@ -112,7 +112,7 @@ export default function SuppliesPage() {
           <h2 className="font-display text-2xl md:col-span-2">Stock-in / stock-out</h2>
           <Field label="Supply" required>
             <select
-              className="h-11 w-full border border-[var(--border)] bg-[var(--bg-muted)] px-3"
+              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#9564DD] focus:outline-none focus:ring-2 focus:ring-[#9564DD]/30"
               value={stock.supplyId}
               onChange={(e) => setStock({ ...stock, supplyId: e.target.value })}
               required
@@ -127,7 +127,7 @@ export default function SuppliesPage() {
           </Field>
           <Field label="Movement">
             <select
-              className="h-11 w-full border border-[var(--border)] bg-[var(--bg-muted)] px-3"
+              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#9564DD] focus:outline-none focus:ring-2 focus:ring-[#9564DD]/30"
               value={stock.type}
               onChange={(e) => setStock({ ...stock, type: e.target.value as "in" | "out" })}
             >
@@ -155,8 +155,8 @@ export default function SuppliesPage() {
               </Field>
             </>
           )}
-          {error ? <p className="text-sm text-red-400 md:col-span-2">{error}</p> : null}
-          <Button type="submit">{stock.type === "in" ? "Save stock-in" : "Save stock-out"}</Button>
+          {error ? <p className="break-words text-sm text-red-700 md:col-span-2">{error}</p> : null}
+          <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">{stock.type === "in" ? "Save stock-in" : "Save stock-out"}</Button>
         </form>
       ) : null}
 

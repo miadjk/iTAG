@@ -26,8 +26,8 @@ export default function TransfersPage() {
           {rows.map((t) => {
             const p = schoolProperties.find((x) => x.id === t.propertyId);
             return (
-              <article key={t.id} className="surface p-4 text-sm">
-                <Link href={`/properties/${t.propertyId}`} className="text-[#F1E5A1]">
+              <article key={t.id} className="surface break-words p-4 text-sm">
+                <Link href={`/properties/${t.propertyId}`} className="break-all font-medium text-[#5e2fb0] hover:text-[#9564DD] hover:underline">
                   {p?.inventoryItemNumber}
                 </Link>
                 <p className="mt-2">

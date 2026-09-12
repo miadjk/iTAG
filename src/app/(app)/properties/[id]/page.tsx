@@ -68,8 +68,8 @@ export default function PropertyDetailPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_280px]">
+        <div className="min-w-0 space-y-4 sm:space-y-6">
           {editing && can("encode") ? (
             <EditForm
               property={property}
@@ -99,14 +99,14 @@ export default function PropertyDetailPage() {
           ) : null}
 
           {can("transfer") ? (
-            <section className="surface p-5">
-              <h2 className="font-display text-2xl">Transfer property</h2>
+            <section className="surface p-4 sm:p-5">
+              <h2 className="font-display break-words text-xl sm:text-2xl">Transfer property</h2>
               <TransferForm propertyId={property.id} onSave={transferProperty} />
             </section>
           ) : null}
 
-          <section className="surface p-5">
-            <h2 className="font-display text-2xl">History</h2>
+          <section className="surface p-4 sm:p-5">
+            <h2 className="font-display break-words text-xl sm:text-2xl">History</h2>
             <div className="mt-4 space-y-3">
               {history.map((h) => (
                 <div key={h.id} className="border-b border-[var(--border)] pb-3 text-sm text-[var(--text)]">
@@ -140,7 +140,7 @@ function EditForm({
   const totalCost = Number(form.quantity || 0) * Number(form.unitCost || 0);
   return (
     <form
-      className="surface grid gap-4 p-5 md:grid-cols-2"
+      className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
         await onSave({ ...form, totalCost });
@@ -182,9 +182,9 @@ function EditForm({
       <Field label="Useful life">
         <Input value={form.estimatedUsefulLife} onChange={(e) => setForm({ ...form, estimatedUsefulLife: e.target.value })} />
       </Field>
-      <div className="flex gap-2 md:col-span-2">
-        <Button type="submit">Update property</Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap md:col-span-2">
+        <Button type="submit" className="w-full sm:w-auto">Update property</Button>
+        <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -214,10 +214,10 @@ function AssignForm({
     status: "active" as const,
   });
   return (
-    <section className="surface p-5">
-      <h2 className="font-display text-2xl">Assign property</h2>
+    <section className="surface p-4 sm:p-5">
+      <h2 className="font-display break-words text-xl sm:text-2xl">Assign property</h2>
       <form
-        className="mt-4 grid gap-4 md:grid-cols-2"
+        className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
         onSubmit={async (e) => {
           e.preventDefault();
           await onSave({ propertyId, ...form });
@@ -248,7 +248,7 @@ function AssignForm({
         <Field label="Deadline">
           <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
         </Field>
-        <Button type="submit">Save assignment</Button>
+        <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
       </form>
     </section>
   );
@@ -270,7 +270,7 @@ function TransferForm({
   });
   return (
     <form
-      className="mt-4 grid gap-4 md:grid-cols-2"
+      className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
         onSubmit={async (e) => {
           e.preventDefault();
           await onSave({ propertyId, ...form });
@@ -293,7 +293,7 @@ function TransferForm({
           <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
         </Field>
       </div>
-      <Button type="submit">Confirm transfer</Button>
+      <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Confirm transfer</Button>
     </form>
   );
 }

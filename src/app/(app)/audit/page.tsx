@@ -23,9 +23,9 @@ export default function AuditPage() {
       />
       <div className="space-y-2">
         {logs.map((log) => (
-          <article key={log.id} className="surface p-4 text-sm">
-            <p>{log.action}</p>
-            <p className="mt-1 text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+          <article key={log.id} className="surface break-words p-4 text-sm">
+            <p className="break-words">{log.action}</p>
+            <p className="mt-1 break-words text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
               {log.recordType} · {formatDate(log.createdAt)}
               {log.previousValue ? ` · ${log.previousValue}` : ""}
               {log.newValue ? ` → ${log.newValue}` : ""}

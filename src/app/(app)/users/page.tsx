@@ -63,7 +63,7 @@ export default function UsersPage() {
       />
 
       {mode !== "none" ? (
-        <form onSubmit={submit} className="surface mb-8 space-y-4 p-5">
+        <form onSubmit={submit} className="surface mb-8 space-y-4 p-4 sm:p-5">
           <h2 className="font-display text-2xl">{mode === "replace" ? "New School Head" : "New Property Custodian"}</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="First name" error={!form.firstName.trim() && error ? "This field is required." : undefined}>
@@ -83,10 +83,10 @@ export default function UsersPage() {
             <Input type="password" inputMode="numeric" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </Field>
           <LocationFields value={location} onChange={setLocation} />
-          {error ? <p className="text-sm text-red-700 dark:text-red-400">{error}</p> : null}
-          <div className="flex gap-2">
-            <Button type="submit">Save</Button>
-            <Button type="button" variant="secondary" onClick={() => setMode("none")}>
+          {error ? <p className="break-words text-sm text-red-700">{error}</p> : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button type="submit" className="w-full sm:w-auto">Save</Button>
+            <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setMode("none")}>
               Cancel
             </Button>
           </div>
@@ -96,13 +96,13 @@ export default function UsersPage() {
       <div className="space-y-3">
         {schoolUsers.map((u) => (
           <article key={u.id} className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p>{displayName(u)}</p>
-              <p className="text-xs text-[var(--text-muted)]">
+            <div className="min-w-0">
+              <p className="break-words">{displayName(u)}</p>
+              <p className="mt-1 break-words text-xs text-[var(--text-muted)]">
                 {u.email} · {u.role === "school_head" ? "School Head" : "Property Custodian"}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <StatusBadge label={u.active ? "Active" : "Inactive"} tone={u.active ? "ok" : "danger"} />
               {u.role === "property_custodian" ? (
                 <Button type="button" variant="secondary" onClick={() => setCustodianActive(u.id, !u.active)}>

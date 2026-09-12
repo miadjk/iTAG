@@ -121,7 +121,7 @@ function ProfileForm() {
       />
 
       {!editing ? (
-        <section className="surface grid gap-4 p-5 sm:grid-cols-2">
+        <section className="surface grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5">
           <Meta label="Name" value={`${user.firstName} ${user.middleName} ${user.lastName}`.replace(/\s+/g, " ")} />
           <Meta label="DepEd email" value={user.email} />
           <Meta label="Role" value={user.role === "school_head" ? "School Head" : "Property Custodian"} />
@@ -131,8 +131,8 @@ function ProfileForm() {
           </div>
         </section>
       ) : (
-        <form onSubmit={onSubmit} noValidate className="surface space-y-6 p-5">
-          <div className="grid gap-4 md:grid-cols-3">
+        <form onSubmit={onSubmit} noValidate className="surface space-y-6 p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Field label="First name" error={fieldErrors.firstName}>
               <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
             </Field>
@@ -153,11 +153,11 @@ function ProfileForm() {
             <h2 className="font-display mb-4 text-2xl">School information</h2>
             <LocationFields value={location} onChange={setLocation} errors={fieldErrors} />
           </section>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit">Save / update</Button>
+          {error ? <p className="break-words text-sm text-red-700">{error}</p> : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button type="submit" className="w-full sm:w-auto">Save / update</Button>
             {!setup && user.schoolId ? (
-              <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+              <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
             ) : null}

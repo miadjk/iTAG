@@ -174,8 +174,8 @@ currentAccountablePerson: item.custodianLastUser,
         title="Add property"
         description="Items that share an ICSNO. stay in one group. Each item still gets its own QR code and can be exported together as Excel."
       />
-      <form onSubmit={onSubmit} noValidate className="space-y-8">
-        <section className="surface grid gap-4 p-5 md:grid-cols-2">
+      <form onSubmit={onSubmit} noValidate className="space-y-6 sm:space-y-8">
+        <section className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
           <Field label="Classification">
             <Select
               value={header.classification}
@@ -218,13 +218,13 @@ currentAccountablePerson: item.custodianLastUser,
         ) : null}
 
         {items.map((item, index) => (
-          <section key={index} className="surface grid gap-4 p-5 md:grid-cols-2">
-            <div className="flex items-center justify-between md:col-span-2">
-              <h2 className="font-display text-2xl">Property {index + 1}</h2>
+          <section key={index} className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 md:col-span-2">
+              <h2 className="font-display break-words text-xl sm:text-2xl">Property {index + 1}</h2>
               {items.length > 1 ? (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[var(--text-muted)]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs uppercase tracking-widest text-[var(--text-muted)] transition hover:bg-[#FDF4D2] hover:text-[#9564DD]"
                   onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
                 >
                   <Trash2 className="h-4 w-4" /> Remove
@@ -277,13 +277,13 @@ currentAccountablePerson: item.custodianLastUser,
           </section>
         ))}
 
-        <div className="flex flex-wrap gap-3">
-          <Button type="button" variant="secondary" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
             <Plus className="h-4 w-4" /> Add another property
           </Button>
         </div>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <Button type="submit" loading={loading}>
+        {error ? <p className="break-words text-sm text-red-700">{error}</p> : null}
+        <Button type="submit" loading={loading} className="w-full sm:w-auto">
           Save {items.length > 1 ? "properties" : "property"}
         </Button>
       </form>
