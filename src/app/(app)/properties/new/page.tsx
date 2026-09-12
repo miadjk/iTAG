@@ -224,7 +224,7 @@ currentAccountablePerson: item.custodianLastUser,
               {items.length > 1 ? (
                 <button
                   type="button"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs uppercase tracking-widest text-[var(--text-muted)] transition hover:bg-[#FDF4D2] hover:text-[#9564DD]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs uppercase tracking-widest text-[var(--text-muted)] transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
                   onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
                 >
                   <Trash2 className="h-4 w-4" /> Remove

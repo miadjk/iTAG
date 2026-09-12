@@ -41,15 +41,15 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen min-h-dvh overflow-x-clip bg-[#FFFFFF]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(149,100,221,0.1),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(253,244,210,0.9),transparent_45%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(211,211,255,0.55),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(255,255,211,0.9),transparent_45%)]" />
       <div className="relative mx-auto grid min-h-screen min-h-dvh w-full max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-2 lg:gap-10">
         <div className="min-w-0">
           <div className="mb-6 flex items-center justify-start sm:mb-8">
-            <p className="text-[11px] uppercase tracking-[0.32em] text-[#5e2fb0]">iTAG-PROP</p>
+            <p className="text-[11px] uppercase tracking-[0.32em] text-[#3F3FA3]">iTAG-PROP</p>
           </div>
           <h1 className="font-display break-words text-4xl leading-[1.02] sm:text-6xl lg:text-7xl lg:leading-[0.92]">
             Inventory tracking
-            <span className="block text-[#9564DD]">without losing history.</span>
+            <span className="block text-[#3F3FA3]">without losing history.</span>
           </h1>
           <p className="mt-5 max-w-md break-words text-sm text-[var(--text-muted)] sm:mt-6">
             Encode school properties, generate QR labels and Excel files, then assign and transfer while keeping every custodian on record.
@@ -72,7 +72,7 @@ export default function LoginPage() {
           </div>
           <p className="mt-6 break-words text-xs text-[var(--text-muted)]">
             {schoolHeadHost ? "School Head? " : "Property Custodian? "}
-            <Link href="/register" className="font-medium text-[#5e2fb0] underline-offset-4 hover:text-[#9564DD] hover:underline">
+            <Link href="/register" className="font-medium text-[#3F3FA3] underline-offset-4 hover:bg-[#FFFFD3] hover:text-[#1a1a1e] hover:underline">
               Create an account
             </Link>
           </p>

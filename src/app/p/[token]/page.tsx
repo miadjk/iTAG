@@ -37,7 +37,7 @@ export default async function PublicPropertyPage({ params }: { params: Promise<{
   return (
     <main className="min-h-screen min-h-dvh bg-[#FFFFFF] px-4 py-8 text-[var(--text)] sm:py-10">
       <div className="mx-auto w-full max-w-md">
-        <p className="text-[11px] uppercase tracking-[0.28em] text-[#5e2fb0]">iTAG</p>
+        <p className="text-[11px] uppercase tracking-[0.28em] text-[#3F3FA3]">iTAG</p>
         {property ? (
           <div className="mt-4">
             <ScanResult property={property} title="Scan result" />

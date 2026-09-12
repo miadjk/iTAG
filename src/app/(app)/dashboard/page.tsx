@@ -36,10 +36,10 @@ export default function DashboardPage() {
 
       {user.mustUpdateCredentials ? (
         <div className="surface-accent mb-6 flex items-start gap-3 p-4">
-          <AlertCircle className="h-5 w-5 shrink-0 text-[#9564DD]" />
+          <AlertCircle className="h-5 w-5 shrink-0 text-[#3F3FA3]" />
           <div className="min-w-0">
             <p className="break-words text-sm">Update your School Head profile before operating the school inventory.</p>
-            <Link href="/profile?setup=1" className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs uppercase tracking-widest text-[#5e2fb0] hover:text-[#9564DD]">
+            <Link href="/profile?setup=1" className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs uppercase tracking-widest text-[#3F3FA3] hover:bg-[#FFFFD3] hover:text-[#1a1a1e]">
               Complete setup <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -60,19 +60,19 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3 text-sm">
             {can("encode") ? (
-              <Link href="/properties/new" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#9564DD] hover:bg-[#FDF4D2]/60">
-                Add a property <ArrowRight className="h-4 w-4 shrink-0 text-[#9564DD]" />
+              <Link href="/properties/new" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3]/70">
+                Add a property <ArrowRight className="h-4 w-4 shrink-0 text-[#3F3FA3]" />
               </Link>
             ) : (
-              <Link href="/properties" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#9564DD] hover:bg-[#FDF4D2]/60">
-                Review property records <ArrowRight className="h-4 w-4 shrink-0 text-[#9564DD]" />
+              <Link href="/properties" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3]/70">
+                Review property records <ArrowRight className="h-4 w-4 shrink-0 text-[#3F3FA3]" />
               </Link>
             )}
-            <Link href="/assignments" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#9564DD] hover:bg-[#FDF4D2]/60">
-              Assignments <ArrowRight className="h-4 w-4 shrink-0 text-[#9564DD]" />
+            <Link href="/assignments" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3]/70">
+              Assignments <ArrowRight className="h-4 w-4 shrink-0 text-[#3F3FA3]" />
             </Link>
-            <Link href="/audit" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#9564DD] hover:bg-[#FDF4D2]/60">
-              Activity <ArrowRight className="h-4 w-4 shrink-0 text-[#9564DD]" />
+            <Link href="/audit" className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3 text-[var(--text)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3]/70">
+              Activity <ArrowRight className="h-4 w-4 shrink-0 text-[#3F3FA3]" />
             </Link>
           </div>
         </section>
@@ -106,7 +106,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-xs text-[var(--text-muted)]">{unreadNotifications.length} unread</p>
           <div className="mt-4 space-y-3">
             {unreadNotifications.slice(0, 5).map((n) => (
-              <div key={n.id} className="rounded-lg border border-[var(--border)] bg-[#FDF4D2]/40 p-3">
+              <div key={n.id} className="rounded-lg border border-[var(--border)] bg-[#FFFFD3]/50 p-3">
                 <p className="break-words text-sm">{n.title}</p>
                 <p className="mt-1 break-words text-xs text-[var(--text-muted)]">{n.body}</p>
               </div>
@@ -174,8 +174,8 @@ export default function DashboardPage() {
 function Stat({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Package }) {
   return (
     <div className="surface p-4 sm:p-5">
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FDF4D2]">
-        <Icon className="h-4 w-4 text-[#9564DD]" />
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#D3D3FF]/50">
+        <Icon className="h-4 w-4 text-[#3F3FA3]" />
       </span>
       <p className="font-display mt-3 text-3xl sm:mt-4 sm:text-4xl">{value}</p>
       <p className="mt-1 break-words text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>

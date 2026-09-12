@@ -115,7 +115,7 @@ export default function AssignmentsPage() {
               <article key={a.id} className="surface p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <Link href={`/properties/${a.propertyId}`} className="break-words text-sm font-medium text-[#5e2fb0] hover:text-[#9564DD] hover:underline">
+                    <Link href={`/properties/${a.propertyId}`} className="break-words text-sm font-medium text-[#3F3FA3] hover:bg-[#FFFFD3] hover:text-[#1a1a1e] hover:underline">
                       {p?.description || "Property"}
                     </Link>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">

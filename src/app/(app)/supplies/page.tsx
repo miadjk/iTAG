@@ -112,7 +112,7 @@ export default function SuppliesPage() {
           <h2 className="font-display text-2xl md:col-span-2">Stock-in / stock-out</h2>
           <Field label="Supply" required>
             <select
-              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#9564DD] focus:outline-none focus:ring-2 focus:ring-[#9564DD]/30"
+              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#3F3FA3] focus:outline-none focus:ring-2 focus:ring-[#D3D3FF]"
               value={stock.supplyId}
               onChange={(e) => setStock({ ...stock, supplyId: e.target.value })}
               required
@@ -127,7 +127,7 @@ export default function SuppliesPage() {
           </Field>
           <Field label="Movement">
             <select
-              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#9564DD] focus:outline-none focus:ring-2 focus:ring-[#9564DD]/30"
+              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#3F3FA3] focus:outline-none focus:ring-2 focus:ring-[#D3D3FF]"
               value={stock.type}
               onChange={(e) => setStock({ ...stock, type: e.target.value as "in" | "out" })}
             >

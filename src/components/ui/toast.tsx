@@ -27,7 +27,7 @@ export function ToastHost({
           {toast.tone === "error" ? (
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
           ) : (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#9564DD]" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#3F3FA3]" />
           )}
           <div className="min-w-0 flex-1">
             <p className="break-words text-xs uppercase tracking-wide">{toast.title}</p>
@@ -36,7 +36,7 @@ export function ToastHost({
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[#FDF4D2] hover:text-[#9564DD]"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

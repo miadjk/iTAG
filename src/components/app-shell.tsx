@@ -71,12 +71,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#FFFFFF] text-[var(--text)]">
       <aside
         className={clsx(
-          "fixed inset-y-0 left-0 z-40 flex w-[min(272px,85vw)] flex-col border-r border-[var(--border)] bg-[#FFFFFF] shadow-[8px_0_30px_rgba(149,100,221,0.06)] transition-transform duration-200",
+          "fixed inset-y-0 left-0 z-40 flex w-[min(272px,85vw)] flex-col border-r border-[var(--border)] bg-[#FFFFFF] shadow-[8px_0_30px_rgba(63,63,163,0.08)] transition-transform duration-200",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="border-b border-[var(--border)] bg-[#FDF4D2]/60 px-5 py-6">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[#5e2fb0]">iTAG-PROP</p>
+        <div className="border-b border-[var(--border)] bg-[#D3D3FF]/30 px-5 py-6">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[#3F3FA3]">iTAG-PROP</p>
           <h1 className="font-display mt-2 text-3xl leading-none text-[var(--sidebar-text)]">Inventory</h1>
         </div>
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
@@ -90,8 +90,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={clsx(
                   "mb-1 flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[11px] uppercase tracking-[0.14em] transition",
                   active
-                    ? "bg-[#9564DD] text-white shadow-[0_6px_18px_rgba(149,100,221,0.3)]"
-                    : "text-[var(--sidebar-muted)] hover:bg-[#FDF4D2] hover:text-[#5e2fb0]",
+                    ? "bg-[#D3D3FF] text-[#1a1a1e] shadow-[0_6px_18px_rgba(63,63,163,0.22)]"
+                    : "text-[var(--sidebar-muted)] hover:bg-[#FFFFD3] hover:text-[#1a1a1e]",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -111,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               await logout();
               router.replace("/login");
             }}
-            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-[11px] uppercase tracking-[0.14em] text-[var(--sidebar-muted)] transition hover:bg-[#FDF4D2] hover:text-[#9564DD]"
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-[11px] uppercase tracking-[0.14em] text-[var(--sidebar-muted)] transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
           >
             <LogOut className="h-4 w-4" /> Logout
           </button>
@@ -127,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] transition hover:border-[#9564DD] hover:text-[#9564DD] lg:hidden"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3] hover:text-[#1a1a1e] lg:hidden"
               onClick={() => setOpen(true)}
               aria-label="Open menu"
             >
@@ -143,20 +143,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="relative">
               <button
                 type="button"
-                className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] transition hover:border-[#9564DD] hover:text-[#9564DD]"
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
                 onClick={() => setNotesOpen((v) => !v)}
                 aria-label="Notifications"
               >
                 <Bell className="h-4 w-4" />
                 {unreadNotifications.length > 0 ? (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#9564DD]" />
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#3F3FA3]" />
                 ) : null}
               </button>
               {notesOpen ? (
                 <div className="absolute right-0 top-12 z-30 w-[min(92vw,360px)] rounded-xl border border-[var(--border)] bg-[#FFFFFF] p-3 shadow-2xl">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-[11px] uppercase tracking-widest">Notifications</p>
-                    <button type="button" className="min-h-11 text-[10px] uppercase text-[#5e2fb0] hover:text-[#9564DD]" onClick={markAllNotificationsRead}>
+                    <button type="button" className="min-h-11 rounded-lg px-2 text-[10px] uppercase text-[#3F3FA3] hover:bg-[#FFFFD3] hover:text-[#1a1a1e]" onClick={markAllNotificationsRead}>
                       Mark all read
                     </button>
                   </div>
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <button
                           key={n.id}
                           type="button"
-                          className="block w-full rounded-lg border border-[var(--border)] p-3 text-left transition hover:border-[#9564DD] hover:bg-[#FDF4D2]/60"
+                          className="block w-full rounded-lg border border-[var(--border)] p-3 text-left transition hover:border-[#D3D3FF] hover:bg-[#FFFFD3]/70"
                           onClick={() => {
                             markNotificationRead(n.id);
                             if (n.href) router.push(n.href);

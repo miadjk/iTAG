@@ -113,10 +113,10 @@ export default function PropertiesPage() {
                       {p.description}
                     </span>
                     <span className="flex flex-wrap gap-2">
-                      <button type="button" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FDF4D2] hover:text-[#9564DD]" onClick={() => setQrId(p.id)}>
+                      <button type="button" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]" onClick={() => setQrId(p.id)}>
                         <QrCode className="h-3.5 w-3.5" /> QR
                       </button>
-                      <Link href={`/properties/${p.id}`} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FDF4D2] hover:text-[#9564DD]">
+                      <Link href={`/properties/${p.id}`} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]">
                         <Eye className="h-3.5 w-3.5" /> View
                       </Link>
                     </span>

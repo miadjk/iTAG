@@ -26,7 +26,7 @@ export function Field({
 }
 
 const controlBase =
-  "min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] transition focus:border-[#9564DD] focus:outline-none focus:ring-2 focus:ring-[#9564DD]/30";
+  "min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] transition focus:border-[#3F3FA3] focus:outline-none focus:ring-2 focus:ring-[#D3D3FF]";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={clsx(controlBase, "h-11", className)} {...props} />;

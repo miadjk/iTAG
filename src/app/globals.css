@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #9564dd;
-  --color-brand-dark: #7a4cc4;
-  --color-brand-ink: #5e2fb0;
-  --color-accent: #fdf4d2;
-  --color-accent-border: #eadfae;
+  --color-brand: #d3d3ff;
+  --color-brand-ink: #3f3fa3;
+  --color-highlight: #ffffd3;
+  --color-accent-border: #d9d9f2;
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
 }
@@ -13,20 +12,19 @@
 :root {
   --bg: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-muted: #fdf4d2;
-  --bg-soft: #fffdf3;
+  --bg-muted: #efefff;
+  --bg-soft: #f7f7ff;
   --bg-sidebar: #ffffff;
   --sidebar-text: #1a1a1e;
   --sidebar-muted: #5f5b6b;
   --text: #1a1a1e;
   --text-muted: #5f5b6b;
-  --border: #e7dfc2;
-  --border-strong: #d6cba0;
-  --ring: #9564dd;
-  --brand: #9564dd;
-  --brand-dark: #7a4cc4;
-  --brand-ink: #5e2fb0;
-  --accent: #fdf4d2;
+  --border: #dfdff2;
+  --border-strong: #c9c9ea;
+  --ring: #3f3fa3;
+  --brand: #d3d3ff;
+  --brand-ink: #3f3fa3;
+  --highlight: #ffffd3;
   --inverse: #ffffff;
   color-scheme: light;
 }
@@ -76,8 +74,8 @@ canvas {
 }
 
 ::selection {
-  background: #9564dd;
-  color: #ffffff;
+  background: #d3d3ff;
+  color: #1a1a1e;
 }
 
 :focus-visible {

@@ -212,7 +212,7 @@ export default function ReportsPage() {
       ) : (
         <div className="table-scroll" tabIndex={0} role="region" aria-label="Property report table">
           <table className="w-full text-sm">
-            <thead className="bg-[#FDF4D2] text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+            <thead className="bg-[#D3D3FF]/40 text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
               <tr>
                 <th className="p-3 text-left">ICSNO.</th>
                 <th className="p-3 text-left">Item No.</th>

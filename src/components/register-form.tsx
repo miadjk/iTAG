@@ -71,11 +71,11 @@ export function RegisterForm({ schoolHead }: { schoolHead: boolean }) {
     <div className="min-h-screen min-h-dvh bg-[#FFFFFF] px-4 py-8 text-[var(--text)] sm:py-10">
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-6 flex items-center justify-start">
-          <Link href="/login" className="inline-flex min-h-11 items-center rounded-lg px-2 text-[11px] uppercase tracking-[0.18em] text-[#5e2fb0] hover:bg-[#FDF4D2] hover:text-[#9564DD]">
+          <Link href="/login" className="inline-flex min-h-11 items-center rounded-lg px-2 text-[11px] uppercase tracking-[0.18em] text-[#3F3FA3] hover:bg-[#FFFFD3] hover:text-[#1a1a1e]">
             Back to sign in
           </Link>
         </div>
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[#5e2fb0]">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[#3F3FA3]">
           {schoolHead ? "School Head" : "Property Custodian"}
         </p>
         <h1 className="font-display mt-2 break-words text-4xl sm:text-5xl">Create account</h1>
