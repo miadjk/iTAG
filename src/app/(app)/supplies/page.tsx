@@ -257,7 +257,13 @@ export default function SuppliesPage() {
             </Select>
           </Field>
           <Field label="Quantity" required>
-            <Input type="number" min={1} value={stock.quantity} onChange={(e) => setStock({ ...stock, quantity: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={1}
+              placeholder="0"
+              value={stock.quantity || ""}
+              onChange={(e) => setStock({ ...stock, quantity: e.target.value === "" ? 0 : Number(e.target.value) })}
+            />
           </Field>
           <Field label="Date">
             <Input type="date" value={stock.date} onChange={(e) => setStock({ ...stock, date: e.target.value })} />
