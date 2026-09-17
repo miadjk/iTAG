@@ -22,8 +22,8 @@ export default function SuppliesPage() {
     name: "",
     description: "",
     unit: "ream",
-    currentQuantity: 0,
-    minimumStockLevel: 10,
+    currentQuantity: "",
+    minimumStockLevel: "",
     location: "",
     remarks: "",
     classification: "consumable" as PropertyClassification,
@@ -33,7 +33,7 @@ export default function SuppliesPage() {
   const [stock, setStock] = useState({
     supplyId: "",
     type: "in" as "in" | "out",
-    quantity: 1,
+    quantity: "",
     date: new Date().toISOString().slice(0, 10),
     receivedBy: "",
     position: "",
@@ -70,14 +70,18 @@ export default function SuppliesPage() {
       return;
     }
     try {
-      await upsertSupply(form);
+      await upsertSupply({
+        ...form,
+        currentQuantity: Number(form.currentQuantity) || 0,
+        minimumStockLevel: Number(form.minimumStockLevel) || 0,
+      });
       setOpen(false);
       setForm({
         name: "",
         description: "",
         unit: "ream",
-        currentQuantity: 0,
-        minimumStockLevel: 10,
+        currentQuantity: "",
+        minimumStockLevel: "",
         location: "",
         remarks: "",
         classification: "consumable",
@@ -149,8 +153,8 @@ export default function SuppliesPage() {
               type="number"
               min={0}
               placeholder="0"
-              value={form.currentQuantity || ""}
-              onChange={(e) => setForm({ ...form, currentQuantity: e.target.value === "" ? 0 : Number(e.target.value) })}
+              value={form.currentQuantity}
+              onChange={(e) => setForm({ ...form, currentQuantity: e.target.value })}
             />
           </Field>
           <Field label="Minimum stock level">
@@ -158,8 +162,8 @@ export default function SuppliesPage() {
               type="number"
               min={0}
               placeholder="0"
-              value={form.minimumStockLevel || ""}
-              onChange={(e) => setForm({ ...form, minimumStockLevel: e.target.value === "" ? 0 : Number(e.target.value) })}
+              value={form.minimumStockLevel}
+              onChange={(e) => setForm({ ...form, minimumStockLevel: e.target.value })}
             />
           </Field>
           <Field label="Location">
@@ -213,10 +217,11 @@ export default function SuppliesPage() {
             e.preventDefault();
             setError("");
             try {
+              const qty = Number(stock.quantity) || 0;
               if (stock.type === "in") {
                 await stockIn({
                   supplyId: stock.supplyId,
-                  quantity: stock.quantity,
+                  quantity: qty,
                   date: stock.date,
                   receivedBy: stock.receivedBy,
                   position: stock.position,
@@ -225,14 +230,14 @@ export default function SuppliesPage() {
               } else {
                 await stockOut({
                   supplyId: stock.supplyId,
-                  quantity: stock.quantity,
+                  quantity: qty,
                   date: stock.date,
                   receivedBy: stock.receivedBy,
                   position: stock.position,
                   remarks: stock.remarks,
                 });
               }
-              setStock((prev) => ({ ...prev, quantity: 1, receivedBy: "", position: "", remarks: "" }));
+              setStock((prev) => ({ ...prev, quantity: "", receivedBy: "", position: "", remarks: "" }));
               setHistorySupplyId(stock.supplyId);
             } catch (err) {
               setError(err instanceof Error ? err.message : "Unable to record stock movement.");
@@ -261,8 +266,8 @@ export default function SuppliesPage() {
               type="number"
               min={1}
               placeholder="0"
-              value={stock.quantity || ""}
-              onChange={(e) => setStock({ ...stock, quantity: e.target.value === "" ? 0 : Number(e.target.value) })}
+              value={stock.quantity}
+              onChange={(e) => setStock({ ...stock, quantity: e.target.value })}
             />
           </Field>
           <Field label="Date">
