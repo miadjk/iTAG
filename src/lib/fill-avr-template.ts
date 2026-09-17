@@ -82,15 +82,16 @@ export function fillAvrWorksheet(sheet: ExcelJS.Worksheet, header: AvrHeader, it
   writeCell(sheet, "E37", receivedByName || null);
   writeCell(sheet, "E38", receivedByPosition || null);
 
-  // Received from / Received by date areas (merged A39:D39 + A40:D40 and E39:H39 + E40:H40).
-  // Replace old position/office template text with the actual Date Acquired.
-  // Keep the existing "Date" labels in A42 / E42; clear the old static date in A41 / E41.
+  // Received from / Received by: date value in row 39, "Date" label in row 40.
+  // Clear old position/office text and the previous static date / label rows.
   writeCell(sheet, "A39", acquired || null);
-  writeCell(sheet, "A40", null);
+  writeCell(sheet, "A40", "Date");
   writeCell(sheet, "E39", acquired || null);
-  writeCell(sheet, "E40", null);
+  writeCell(sheet, "E40", "Date");
   writeCell(sheet, "A41", null);
   writeCell(sheet, "E41", null);
+  writeCell(sheet, "A42", null);
+  writeCell(sheet, "E42", null);
 
   clearInventoryRows(sheet);
 
