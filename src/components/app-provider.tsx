@@ -710,6 +710,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
     await refresh();
+    if (existing && !input.id) {
+      pushToast({
+        title: "Existing supply updated",
+        body: "Matched by name, unit, classification, type, and code. Use Stock-in to add quantity.",
+        tone: "success",
+      });
+    }
     const mapped = mapSupply(res.data);
     return schoolSupplies.find((s) => s.id === savedId) ?? {
       ...mapped,
