@@ -10,6 +10,7 @@ import {
 import { emptyState, loadSchoolState, requireSchool } from "@/lib/data";
 import { mapProperty, propertyInsert } from "@/lib/mappers";
 import { getSchoolName } from "@/lib/locations";
+import { normalizeTypeFields, validateTypeFields } from "@/lib/property-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { throwIfError } from "@/lib/site";
@@ -286,10 +287,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (seen.has(item.toLowerCase())) throw new Error(`Duplicate Item No. in this form: ${item}`);
       seen.add(item.toLowerCase());
       assertUniqueItem(item);
+      const typeErrors = validateTypeFields(input.classification, input.type || "", input.code || "");
+      if (typeErrors.type || typeErrors.code) {
+        throw new Error(typeErrors.type || typeErrors.code || "Invalid type/code for classification.");
+      }
     }
     const created: PropertyRecord[] = [];
     for (const input of inputs) {
       const totalCost = input.totalCost ?? input.unitCost * input.quantity;
+      const typeFields = normalizeTypeFields(input.classification, input.type || "", input.code || "");
       const insert = await client
         .from("properties")
         .insert(
@@ -297,6 +303,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             schoolId,
             createdBy: user.id,
             classification: input.classification,
+            type: typeFields.type,
+            code: typeFields.code,
             entityName: input.entityName,
             fundCluster: input.fundCluster,
             icsNumber: input.icsNumber,
@@ -356,7 +364,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const current = schoolProperties.find((p) => p.id === id);
     if (!current) throw new Error("Property not found.");
     assertUniqueItem(input.inventoryItemNumber, id);
+    const typeErrors = validateTypeFields(input.classification, input.type || "", input.code || "");
+    if (typeErrors.type || typeErrors.code) {
+      throw new Error(typeErrors.type || typeErrors.code || "Invalid type/code for classification.");
+    }
     const totalCost = input.totalCost ?? input.unitCost * input.quantity;
+    const typeFields = normalizeTypeFields(input.classification, input.type || "", input.code || "");
     const updated = await client
       .from("properties")
       .update({
@@ -364,6 +377,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           schoolId: current.schoolId,
           createdBy: current.createdBy,
           classification: input.classification,
+          type: typeFields.type,
+          code: typeFields.code,
           entityName: input.entityName,
           fundCluster: input.fundCluster,
           icsNumber: input.icsNumber,

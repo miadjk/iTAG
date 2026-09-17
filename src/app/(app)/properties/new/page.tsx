@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { CLASSIFICATIONS, useApp, type PropertyInput } from "@/lib/app-context";
 import { getSchoolName } from "@/lib/locations";
+import {
+  classificationNeedsType,
+  codeForType,
+  CONSUMABLE_TYPES,
+  normalizeTypeFields,
+  SEMI_EXPENDABLE_TYPES,
+  validateTypeFields,
+} from "@/lib/property-types";
 import { formatMoney, normalizeKey } from "@/lib/utils";
+import type { PropertyClassification } from "@/types";
 
 type ItemDraft = {
   inventoryItemNumber: string;
@@ -52,7 +61,9 @@ export default function NewPropertyPage() {
   const [loading, setLoading] = useState(false);
   const schoolName = getSchoolName(user?.schoolId) || user?.schoolName || "";
   const [header, setHeader] = useState({
-    classification: "low_value" as const,
+    classification: "low_value" as PropertyClassification,
+    type: "",
+    code: "",
     entityName: schoolName,
     fundCluster: "",
     icsNumber: "",
@@ -88,8 +99,27 @@ export default function NewPropertyPage() {
       location: prev.location || first.location,
       officeDepartment: prev.officeDepartment || first.officeDepartment,
       classification: prev.classification || first.classification,
+      type: prev.type || first.type || "",
+      code: prev.code || first.code || "",
     }));
   }, [existingGroup]);
+
+  function setClassification(classification: PropertyClassification) {
+    setHeader((prev) => ({
+      ...prev,
+      classification,
+      type: "",
+      code: "",
+    }));
+  }
+
+  function setPropertyType(typeLabel: string) {
+    setHeader((prev) => ({
+      ...prev,
+      type: typeLabel,
+      code: codeForType(prev.classification, typeLabel),
+    }));
+  }
 
   if (!can("encode")) {
     return <p className="text-sm text-[var(--text-muted)]">Property encoding is performed by the Property Custodian.</p>;
@@ -104,6 +134,9 @@ export default function NewPropertyPage() {
     const next: Record<string, string> = {};
     if (!header.entityName.trim()) next.entityName = "This field is required.";
     if (!header.icsNumber.trim()) next.icsNumber = "This field is required.";
+    const typeErrors = validateTypeFields(header.classification, header.type, header.code);
+    if (typeErrors.type) next.propertyType = typeErrors.type;
+    if (typeErrors.code) next.propertyCode = typeErrors.code;
     items.forEach((item, index) => {
       if (!item.inventoryItemNumber.trim()) next[`item-${index}-no`] = "This field is required.";
       if (!item.description.trim()) next[`item-${index}-desc`] = "This field is required.";
@@ -132,8 +165,11 @@ export default function NewPropertyPage() {
     }
     setLoading(true);
     try {
+      const typeFields = normalizeTypeFields(header.classification, header.type, header.code);
       const payload: PropertyInput[] = items.map((item) => ({
         classification: header.classification,
+        type: typeFields.type,
+        code: typeFields.code,
         entityName: header.entityName.trim(),
         fundCluster: header.fundCluster,
         icsNumber: header.icsNumber.trim(),
@@ -147,7 +183,7 @@ export default function NewPropertyPage() {
         totalCost: item.quantity * item.unitCost,
         fundSource: item.fundSource,
         custodianLastUser: item.custodianLastUser,
-currentAccountablePerson: item.custodianLastUser,
+        currentAccountablePerson: item.custodianLastUser,
         officeDepartment: header.officeDepartment,
         location: header.location,
         estimatedUsefulLife: item.estimatedUsefulLife,
@@ -179,7 +215,7 @@ currentAccountablePerson: item.custodianLastUser,
           <Field label="Classification">
             <Select
               value={header.classification}
-              onChange={(e) => setHeader({ ...header, classification: e.target.value as typeof header.classification })}
+              onChange={(e) => setClassification(e.target.value as PropertyClassification)}
             >
               {CLASSIFICATIONS.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -188,6 +224,35 @@ currentAccountablePerson: item.custodianLastUser,
               ))}
             </Select>
           </Field>
+          {header.classification === "semi_expendable" ? (
+            <Field label="Semi-Expendable Type" error={fieldErrors.propertyType}>
+              <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
+                <option value="">Select type</option>
+                {SEMI_EXPENDABLE_TYPES.map((t) => (
+                  <option key={t.code + t.label} value={t.label}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          {header.classification === "consumable" ? (
+            <Field label="Consumable Type" error={fieldErrors.propertyType}>
+              <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
+                <option value="">Select type</option>
+                {CONSUMABLE_TYPES.map((t) => (
+                  <option key={t.code + t.label} value={t.label}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          {classificationNeedsType(header.classification) ? (
+            <Field label="Code" error={fieldErrors.propertyCode}>
+              <Input readOnly value={header.code} placeholder="Auto-generated" />
+            </Field>
+          ) : null}
           <Field label="Entity" error={fieldErrors.entityName}>
             <Input value={header.entityName} onChange={(e) => setHeader({ ...header, entityName: e.target.value })} />
           </Field>

@@ -51,6 +51,8 @@ export function mapProperty(row: Row): PropertyRecord {
     schoolId: str(row.school_id),
     createdBy: str(row.created_by),
     classification: (row.classification as PropertyRecord["classification"]) || "low_value",
+    type: str(row.type),
+    code: str(row.code),
     entityName: str(row.entity_name),
     fundCluster: str(row.fund_cluster),
     icsNumber: str(row.ics_number),
@@ -209,6 +211,8 @@ export function propertyInsert(input: {
   schoolId: string;
   createdBy: string;
   classification: string;
+  type: string;
+  code: string;
   entityName: string;
   fundCluster: string;
   icsNumber: string;
@@ -238,6 +242,8 @@ export function propertyInsert(input: {
     school_id: input.schoolId,
     created_by: input.createdBy,
     classification: input.classification,
+    type: input.type,
+    code: input.code,
     entity_name: input.entityName,
     fund_cluster: input.fundCluster,
     ics_number: input.icsNumber.trim(),

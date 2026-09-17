@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Clock, Package } from "lucide-react";
 import type { PropertyCondition, PropertyStatus, SupplyStatus } from "@/types";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { classificationLabel } from "@/lib/property-types";
 
 export function propertyStatusBadge(status: PropertyStatus) {
   const map = {
@@ -34,6 +35,6 @@ export function supplyStatusBadge(status: SupplyStatus) {
   return <StatusBadge {...map[status]} />;
 }
 
-export function classLabel(value: "low_value" | "high_value") {
-  return value === "low_value" ? "Low-Value" : "High-Value";
+export function classLabel(value: "low_value" | "high_value" | "semi_expendable" | "consumable") {
+  return classificationLabel(value);
 }

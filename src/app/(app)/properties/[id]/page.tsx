@@ -8,11 +8,19 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
-import { type PropertyInput, useApp } from "@/lib/app-context";
+import { type PropertyInput, useApp, CLASSIFICATIONS } from "@/lib/app-context";
 import { ScanResult } from "@/components/scan-result";
 import { downloadPropertyExcel } from "@/lib/files";
+import {
+  classificationNeedsType,
+  codeForType,
+  CONSUMABLE_TYPES,
+  normalizeTypeFields,
+  SEMI_EXPENDABLE_TYPES,
+  validateTypeFields,
+} from "@/lib/property-types";
 import { formatDate, formatMoney } from "@/lib/utils";
-import type { PropertyRecord } from "@/types";
+import type { PropertyClassification, PropertyRecord } from "@/types";
 
 export default function PropertyDetailPage() {
   const params = useParams<{ id: string }>();
@@ -136,16 +144,87 @@ function EditForm({
   onCancel: () => void;
   onSave: (input: PropertyInput) => Promise<void> | void;
 }) {
-  const [form, setForm] = useState({ ...property });
+  const [form, setForm] = useState({
+    ...property,
+    type: property.type || "",
+    code: property.code || "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const totalCost = Number(form.quantity || 0) * Number(form.unitCost || 0);
+
+  function setClassification(classification: PropertyClassification) {
+    setForm((prev) => ({
+      ...prev,
+      classification,
+      type: "",
+      code: "",
+    }));
+  }
+
+  function setPropertyType(typeLabel: string) {
+    setForm((prev) => ({
+      ...prev,
+      type: typeLabel,
+      code: codeForType(prev.classification, typeLabel),
+    }));
+  }
+
   return (
     <form
       className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
-        await onSave({ ...form, totalCost });
+        const typeErrors = validateTypeFields(form.classification, form.type, form.code);
+        const next: Record<string, string> = {};
+        if (typeErrors.type) next.propertyType = typeErrors.type;
+        if (typeErrors.code) next.propertyCode = typeErrors.code;
+        setFieldErrors(next);
+        if (Object.keys(next).length) return;
+        const typeFields = normalizeTypeFields(form.classification, form.type, form.code);
+        await onSave({ ...form, ...typeFields, totalCost });
       }}
     >
+      <Field label="Classification">
+        <Select
+          value={form.classification}
+          onChange={(e) => setClassification(e.target.value as PropertyClassification)}
+        >
+          {CLASSIFICATIONS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {form.classification === "semi_expendable" ? (
+        <Field label="Semi-Expendable Type" error={fieldErrors.propertyType}>
+          <Select value={form.type} onChange={(e) => setPropertyType(e.target.value)}>
+            <option value="">Select type</option>
+            {SEMI_EXPENDABLE_TYPES.map((t) => (
+              <option key={t.code + t.label} value={t.label}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+      {form.classification === "consumable" ? (
+        <Field label="Consumable Type" error={fieldErrors.propertyType}>
+          <Select value={form.type} onChange={(e) => setPropertyType(e.target.value)}>
+            <option value="">Select type</option>
+            {CONSUMABLE_TYPES.map((t) => (
+              <option key={t.code + t.label} value={t.label}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+      {classificationNeedsType(form.classification) ? (
+        <Field label="Code" error={fieldErrors.propertyCode}>
+          <Input readOnly value={form.code} placeholder="Auto-generated" />
+        </Field>
+      ) : null}
       <Field label="Entity">
         <Input value={form.entityName} onChange={(e) => setForm({ ...form, entityName: e.target.value })} />
       </Field>

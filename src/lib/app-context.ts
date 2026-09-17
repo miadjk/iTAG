@@ -120,8 +120,10 @@ export function useOptionalApp() {
 }
 
 export const CLASSIFICATIONS: { value: PropertyClassification; label: string }[] = [
-  { value: "low_value", label: "Low-Value" },
   { value: "high_value", label: "High-Value" },
+  { value: "low_value", label: "Low-Value" },
+  { value: "semi_expendable", label: "Semi-Expendable" },
+  { value: "consumable", label: "Consumable" },
 ];
 
 export const CONDITIONS: { value: PropertyCondition; label: string }[] = [

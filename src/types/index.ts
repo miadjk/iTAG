@@ -1,6 +1,6 @@
 export type Role = "school_head" | "property_custodian";
 
-export type PropertyClassification = "low_value" | "high_value";
+export type PropertyClassification = "low_value" | "high_value" | "semi_expendable" | "consumable";
 
 export type PropertyCondition =
   | "serviceable"
@@ -82,6 +82,8 @@ export interface PropertyRecord {
   schoolId: string;
   createdBy: string;
   classification: PropertyClassification;
+  type: string;
+  code: string;
   entityName: string;
   fundCluster: string;
   icsNumber: string;
