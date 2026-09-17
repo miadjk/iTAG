@@ -70,6 +70,8 @@ create table if not exists public.properties (
   serial_number text not null default '',
   warranty text not null default '',
   qr_code text not null unique default encode(gen_random_bytes(16), 'hex'),
+  permanent_id text,
+  qr_version integer not null default 1,
   excel_generated_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -839,3 +841,33 @@ $$;
 
 revoke all on function public.apply_stock_movement(uuid, text, numeric, date, text, text, text, text) from public;
 grant execute on function public.apply_stock_movement(uuid, text, numeric, date, text, text, text, text) to authenticated;
+
+-- Permanent Property ID + QR version (also in patch-permanent-id-qr-version.sql)
+create unique index if not exists properties_permanent_id_uidx
+  on public.properties (permanent_id)
+  where permanent_id is not null and btrim(permanent_id) <> '';
+
+create or replace function public.allocate_permanent_property_id()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_year text := to_char(timezone('Asia/Manila', now()), 'YYYY');
+  v_prefix text := 'PROP-' || v_year || '-';
+  v_max int := 0;
+  v_next text;
+begin
+  select coalesce(max(nullif(regexp_replace(permanent_id, '^PROP-[0-9]{4}-', ''), '')::int), 0)
+    into v_max
+  from public.properties
+  where permanent_id ~ ('^PROP-' || v_year || '-[0-9]+$');
+
+  v_next := v_prefix || lpad((v_max + 1)::text, 4, '0');
+  return v_next;
+end;
+$$;
+
+revoke all on function public.allocate_permanent_property_id() from public;
+grant execute on function public.allocate_permanent_property_id() to authenticated;

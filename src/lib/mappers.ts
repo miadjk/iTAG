@@ -83,6 +83,8 @@ export function mapProperty(row: Row): PropertyRecord {
     serialNumber: str(row.serial_number),
     warranty: str(row.warranty),
     qrCode: str(row.qr_code),
+    permanentId: str(row.permanent_id),
+    qrVersion: num(row.qr_version, 1) || 1,
     excelGeneratedAt: str(row.excel_generated_at),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),

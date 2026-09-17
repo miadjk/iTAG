@@ -31,6 +31,8 @@ export type PropertyInput = Omit<
   | "schoolId"
   | "createdBy"
   | "qrCode"
+  | "permanentId"
+  | "qrVersion"
   | "excelGeneratedAt"
   | "createdAt"
   | "updatedAt"

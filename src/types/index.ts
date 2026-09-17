@@ -114,6 +114,8 @@ export interface PropertyRecord {
   serialNumber: string;
   warranty: string;
   qrCode: string;
+  permanentId: string;
+  qrVersion: number;
   excelGeneratedAt: string;
   createdAt: string;
   updatedAt: string;

@@ -9,6 +9,7 @@ import {
 } from "@/lib/app-context";
 import { emptyState, loadSchoolState, requireSchool } from "@/lib/data";
 import { mapProperty, mapSupply, propertyInsert } from "@/lib/mappers";
+import { encodedQrFieldsChanged } from "@/lib/qr";
 import { normalizeTypeFields, validateTypeFields } from "@/lib/property-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -19,6 +20,60 @@ import { ToastHost, type ToastItem } from "@/components/ui/toast";
 
 function toastId() {
   return uid("toast");
+}
+
+async function allocatePermanentId(client: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>) {
+  const rpc = await client.rpc("allocate_permanent_property_id");
+  if (!rpc.error && rpc.data) {
+    const value = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  // Fallback if SQL patch is not applied yet: client-side year sequence.
+  const year = new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", year: "numeric" });
+  const prefix = `PROP-${year}-`;
+  const existing = await client.from("properties").select("permanent_id").like("permanent_id", `${prefix}%`);
+  let max = 0;
+  for (const row of existing.data ?? []) {
+    const raw = String((row as { permanent_id?: string }).permanent_id || "");
+    const n = Number(raw.replace(prefix, ""));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}
+
+async function ensurePermanentId(
+  client: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>,
+  property: { id: string; permanentId?: string },
+) {
+  if (property.permanentId?.trim()) return property.permanentId.trim();
+  const permanentId = await allocatePermanentId(client);
+  const updated = await client.from("properties").update({ permanent_id: permanentId }).eq("id", property.id);
+  if (updated.error && /permanent_id/i.test(updated.error.message || "")) {
+    // Column missing — SQL patch not applied; keep going without permanent id.
+    return "";
+  }
+  throwIfError(updated.error, "Unable to assign permanent Property ID.");
+  return permanentId;
+}
+
+async function bumpQrVersionIfEncodedChanged(
+  client: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>,
+  propertyId: string,
+  before: Parameters<typeof encodedQrFieldsChanged>[0],
+  after: Parameters<typeof encodedQrFieldsChanged>[0],
+  previousVersion: number,
+) {
+  if (!encodedQrFieldsChanged(before, after)) return previousVersion || 1;
+  const nextVersion = (previousVersion || 1) + 1;
+  const updated = await client
+    .from("properties")
+    .update({ qr_version: nextVersion })
+    .eq("id", propertyId);
+  if (updated.error && /qr_version/i.test(updated.error.message || "")) {
+    return previousVersion || 1;
+  }
+  throwIfError(updated.error, "Unable to update QR version.");
+  return nextVersion;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -336,9 +391,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .select("*")
         .single();
       throwIfError(insert.error, "Unable to save property.");
-      created.push(mapProperty(insert.data));
-      await writeHistory(insert.data.id, "created", "Property encoded. QR code generated automatically.");
-      await writeAudit("Property created", "property", insert.data.id);
+      const saved = mapProperty(insert.data);
+      let permanentId = saved.permanentId;
+      let qrVersion = saved.qrVersion || 1;
+      if (!permanentId) {
+        permanentId = await allocatePermanentId(client);
+        const idUpdate = await client
+          .from("properties")
+          .update({ permanent_id: permanentId, qr_version: 1 })
+          .eq("id", saved.id)
+          .select("*")
+          .single();
+        if (!idUpdate.error && idUpdate.data) {
+          created.push(mapProperty(idUpdate.data));
+        } else {
+          created.push({ ...saved, permanentId, qrVersion: 1 });
+        }
+        qrVersion = 1;
+      } else {
+        created.push(saved);
+      }
+      await writeHistory(
+        saved.id,
+        "created",
+        `Property encoded. Permanent ID ${permanentId || saved.inventoryItemNumber}. QR version ${qrVersion} (CURRENT).`,
+      );
+      await writeAudit("Property created", "property", saved.id);
     }
     await notifySchool({
       type: "property_registered",
@@ -349,7 +427,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await refresh();
     pushToast({
       title: created.length > 1 ? "Properties saved" : "Property saved",
-      body: "QR codes were generated for each item.",
+      body: "Self-contained offline QR codes were generated for each item.",
       tone: "success",
     });
     return created;
@@ -372,6 +450,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     const totalCost = input.totalCost ?? input.unitCost * input.quantity;
     const typeFields = normalizeTypeFields(input.classification, input.type || "", input.code || "");
+    const afterSnapshot = {
+      description: input.description,
+      classification: input.classification,
+      type: typeFields.type,
+      code: typeFields.code,
+      inventoryItemNumber: input.inventoryItemNumber,
+      icsNumber: input.icsNumber,
+      unitCost: input.unitCost,
+      totalCost,
+      fundSource: input.fundSource,
+      location: input.location,
+      currentAccountablePerson: input.currentAccountablePerson || input.custodianLastUser,
+      custodianLastUser: input.custodianLastUser,
+      status: input.status,
+      dateAcquired: input.dateAcquired,
+      quantity: input.quantity,
+      unitOfMeasure: input.unitOfMeasure,
+    };
     const updated = await client
       .from("properties")
       .update({
@@ -415,10 +511,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .eq("id", id);
     throwIfError(updated.error, "Unable to update property.");
+    await ensurePermanentId(client, current);
+    const nextVersion = await bumpQrVersionIfEncodedChanged(client, id, current, afterSnapshot, current.qrVersion || 1);
+    if (nextVersion !== (current.qrVersion || 1)) {
+      await writeHistory(
+        id,
+        "qr_regenerated",
+        `QR version ${current.qrVersion || 1} marked OUTDATED. QR version ${nextVersion} is now CURRENT.`,
+        String(current.qrVersion || 1),
+        String(nextVersion),
+      );
+    }
     await writeHistory(id, "updated", "Property record updated.");
     await writeAudit("Property updated", "property", id);
     await refresh();
-    pushToast({ title: "Property updated", body: "The existing record was saved.", tone: "success" });
+    pushToast({
+      title: "Property updated",
+      body:
+        nextVersion !== (current.qrVersion || 1)
+          ? `Saved. Current QR is now version ${nextVersion} — reprint the label.`
+          : "The existing record was saved.",
+      tone: "success",
+    });
   };
 
   const deleteProperty = async (id: string) => {
@@ -489,7 +603,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .eq("id", input.propertyId);
     throwIfError(updated.error, "Unable to update property.");
+    await ensurePermanentId(client, current);
+    const afterAssign = {
+      ...current,
+      currentAccountablePerson: accountablePerson,
+      custodianLastUser: accountablePerson,
+      location: input.location,
+      officeDepartment: input.officeDepartment,
+      status: "active" as const,
+    };
+    const nextVersion = await bumpQrVersionIfEncodedChanged(client, input.propertyId, current, afterAssign, current.qrVersion || 1);
     await writeHistory(input.propertyId, "assigned", `Assigned to ${accountablePerson}`, current.currentAccountablePerson, accountablePerson);
+    if (nextVersion !== (current.qrVersion || 1)) {
+      await writeHistory(
+        input.propertyId,
+        "qr_regenerated",
+        `QR version ${current.qrVersion || 1} marked OUTDATED. QR version ${nextVersion} is now CURRENT after assignment.`,
+        String(current.qrVersion || 1),
+        String(nextVersion),
+      );
+    }
     await writeAudit("Property assigned", "property", input.propertyId, current.currentAccountablePerson, accountablePerson);
     await notifySchool({
       type: "assignment",
@@ -501,7 +634,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .map((p) => p.id),
     });
     await refresh();
-    pushToast({ title: "Assignment saved", body: "The assigned user can see this on their dashboard.", tone: "success" });
+    pushToast({
+      title: "Assignment saved",
+      body:
+        nextVersion !== (current.qrVersion || 1)
+          ? `Assigned. Current QR is now version ${nextVersion} — reprint the label.`
+          : "The assigned user can see this on their dashboard.",
+      tone: "success",
+    });
   };
 
   const transferProperty = async (input: {
@@ -543,6 +683,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .eq("id", input.propertyId);
     throwIfError(updated.error, "Unable to update property.");
+    await ensurePermanentId(client, current);
+    const afterTransfer = {
+      ...current,
+      currentAccountablePerson: input.newAccountablePerson.trim(),
+      custodianLastUser: input.newAccountablePerson.trim(),
+      location: input.newLocation,
+      officeDepartment: input.newOffice,
+      status: "active" as const,
+    };
+    const nextVersion = await bumpQrVersionIfEncodedChanged(
+      client,
+      input.propertyId,
+      current,
+      afterTransfer,
+      current.qrVersion || 1,
+    );
     await writeHistory(
       input.propertyId,
       "transferred",
@@ -550,6 +706,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       current.currentAccountablePerson,
       input.newAccountablePerson,
     );
+    if (nextVersion !== (current.qrVersion || 1)) {
+      await writeHistory(
+        input.propertyId,
+        "qr_regenerated",
+        `QR version ${current.qrVersion || 1} marked OUTDATED. QR version ${nextVersion} is now CURRENT after transfer.`,
+        String(current.qrVersion || 1),
+        String(nextVersion),
+      );
+    }
     await writeAudit("Property transferred", "property", input.propertyId);
     await notifySchool({
       type: "transfer",
@@ -558,7 +723,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       href: `/properties/${input.propertyId}`,
     });
     await refresh();
-    pushToast({ title: "Transfer confirmed", body: "Current information updated. Previous assignment kept in history.", tone: "success" });
+    pushToast({
+      title: "Transfer confirmed",
+      body:
+        nextVersion !== (current.qrVersion || 1)
+          ? `Transferred. Current QR is now version ${nextVersion} — reprint the label.`
+          : "Current information updated. Previous assignment kept in history.",
+      tone: "success",
+    });
   };
 
   const verifyProperty = async (input: {

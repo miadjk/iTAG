@@ -187,6 +187,8 @@ function EditForm({
     code: property.code || "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const totalCost = Number(form.quantity || 0) * Number(form.unitCost || 0);
 
   function setClassification(classification: PropertyClassification) {
@@ -206,20 +208,36 @@ function EditForm({
     }));
   }
 
+  function requestSave(e: React.FormEvent) {
+    e.preventDefault();
+    const typeErrors = validateTypeFields(form.classification, form.type, form.code);
+    const next: Record<string, string> = {};
+    if (typeErrors.type) next.propertyType = typeErrors.type;
+    if (typeErrors.code) next.propertyCode = typeErrors.code;
+    setFieldErrors(next);
+    if (Object.keys(next).length) return;
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const typeFields = normalizeTypeFields(form.classification, form.type, form.code);
+      await onSave({ ...form, ...typeFields, totalCost });
+      setConfirmOpen(false);
+    } catch {
+      setConfirmOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
+    <>
     <form
       className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const typeErrors = validateTypeFields(form.classification, form.type, form.code);
-        const next: Record<string, string> = {};
-        if (typeErrors.type) next.propertyType = typeErrors.type;
-        if (typeErrors.code) next.propertyCode = typeErrors.code;
-        setFieldErrors(next);
-        if (Object.keys(next).length) return;
-        const typeFields = normalizeTypeFields(form.classification, form.type, form.code);
-        await onSave({ ...form, ...typeFields, totalCost });
-      }}
+      onSubmit={requestSave}
     >
       <Field label="Classification">
         <Select
@@ -319,6 +337,25 @@ function EditForm({
         </Button>
       </div>
     </form>
+
+    <ConfirmDialog
+      open={confirmOpen}
+      title="Confirm property update"
+      message="Are you sure you want to save this property?"
+      details={
+        <>
+          <p>Property ID: {property.permanentId || "—"}</p>
+          <p>Item: {form.description || "—"}</p>
+          <p>Current QR version: {property.qrVersion || 1}</p>
+          <p>If encoded fields change, a new QR version will be generated after save.</p>
+        </>
+      }
+      confirmLabel="Confirm"
+      loading={saving}
+      onCancel={() => !saving && setConfirmOpen(false)}
+      onConfirm={confirmSave}
+    />
+    </>
   );
 }
 
