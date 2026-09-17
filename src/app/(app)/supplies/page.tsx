@@ -17,12 +17,12 @@ export default function SuppliesPage() {
     name: "",
     description: "",
     unit: "ream",
-    currentQuantity: 0,
-    minimumStockLevel: 10,
+    currentQuantity: "",
+    minimumStockLevel: "",
     location: "",
     remarks: "",
   });
-  const [stock, setStock] = useState({ supplyId: "", type: "in" as "in" | "out", quantity: 1, date: new Date().toISOString().slice(0, 10), reference: "", recipient: "", purpose: "" });
+  const [stock, setStock] = useState({ supplyId: "", type: "in" as "in" | "out", quantity: "", date: new Date().toISOString().slice(0, 10), reference: "", recipient: "", purpose: "" });
 
   return (
     <div>
@@ -44,8 +44,21 @@ export default function SuppliesPage() {
           className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
-            upsertSupply(form);
+            upsertSupply({
+              ...form,
+              currentQuantity: Number(form.currentQuantity) || 0,
+              minimumStockLevel: Number(form.minimumStockLevel) || 0,
+            });
             setOpen(false);
+            setForm({
+              name: "",
+              description: "",
+              unit: "ream",
+              currentQuantity: "",
+              minimumStockLevel: "",
+              location: "",
+              remarks: "",
+            });
           }}
         >
           <Field label="Supply name" required>
@@ -55,10 +68,22 @@ export default function SuppliesPage() {
             <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
           </Field>
           <Field label="Current quantity">
-            <Input type="number" min={0} value={form.currentQuantity} onChange={(e) => setForm({ ...form, currentQuantity: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={form.currentQuantity}
+              onChange={(e) => setForm({ ...form, currentQuantity: e.target.value })}
+            />
           </Field>
           <Field label="Minimum stock level">
-            <Input type="number" min={0} value={form.minimumStockLevel} onChange={(e) => setForm({ ...form, minimumStockLevel: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={form.minimumStockLevel}
+              onChange={(e) => setForm({ ...form, minimumStockLevel: e.target.value })}
+            />
           </Field>
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
@@ -102,8 +127,9 @@ export default function SuppliesPage() {
             e.preventDefault();
             setError("");
             try {
-              if (stock.type === "in") stockIn(stock.supplyId, stock.quantity, stock.date, stock.reference);
-              else stockOut(stock.supplyId, stock.quantity, stock.date, stock.recipient, stock.purpose);
+              const qty = Number(stock.quantity) || 0;
+              if (stock.type === "in") stockIn(stock.supplyId, qty, stock.date, stock.reference);
+              else stockOut(stock.supplyId, qty, stock.date, stock.recipient, stock.purpose);
             } catch (err) {
               setError(err instanceof Error ? err.message : "Unable to record stock movement.");
             }
@@ -136,7 +162,13 @@ export default function SuppliesPage() {
             </select>
           </Field>
           <Field label="Quantity" required>
-            <Input type="number" min={1} value={stock.quantity} onChange={(e) => setStock({ ...stock, quantity: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={1}
+              placeholder="0"
+              value={stock.quantity}
+              onChange={(e) => setStock({ ...stock, quantity: e.target.value })}
+            />
           </Field>
           <Field label="Date">
             <Input type="date" value={stock.date} onChange={(e) => setStock({ ...stock, date: e.target.value })} />
