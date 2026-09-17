@@ -145,10 +145,22 @@ export default function SuppliesPage() {
             </Field>
           ) : null}
           <Field label="Current quantity">
-            <Input type="number" min={0} value={form.currentQuantity} onChange={(e) => setForm({ ...form, currentQuantity: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={form.currentQuantity || ""}
+              onChange={(e) => setForm({ ...form, currentQuantity: e.target.value === "" ? 0 : Number(e.target.value) })}
+            />
           </Field>
           <Field label="Minimum stock level">
-            <Input type="number" min={0} value={form.minimumStockLevel} onChange={(e) => setForm({ ...form, minimumStockLevel: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              value={form.minimumStockLevel || ""}
+              onChange={(e) => setForm({ ...form, minimumStockLevel: e.target.value === "" ? 0 : Number(e.target.value) })}
+            />
           </Field>
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
