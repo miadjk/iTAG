@@ -71,6 +71,10 @@ export default function NewPropertyPage() {
     officeDepartment: "",
     condition: "serviceable" as const,
     status: "idle" as const,
+    receivedFromName: "",
+    receivedFromPosition: "",
+    receivedByName: "",
+    receivedByPosition: "",
   });
   const [items, setItems] = useState<ItemDraft[]>([emptyItem()]);
 
@@ -101,6 +105,10 @@ export default function NewPropertyPage() {
       classification: prev.classification || first.classification,
       type: prev.type || first.type || "",
       code: prev.code || first.code || "",
+      receivedFromName: prev.receivedFromName || first.receivedFromName || "",
+      receivedFromPosition: prev.receivedFromPosition || first.receivedFromPosition || "",
+      receivedByName: prev.receivedByName || first.receivedByName || "",
+      receivedByPosition: prev.receivedByPosition || first.receivedByPosition || "",
     }));
   }, [existingGroup]);
 
@@ -134,6 +142,10 @@ export default function NewPropertyPage() {
     const next: Record<string, string> = {};
     if (!header.entityName.trim()) next.entityName = "This field is required.";
     if (!header.icsNumber.trim()) next.icsNumber = "This field is required.";
+    if (!header.receivedFromName.trim()) next.receivedFromName = "This field is required.";
+    if (!header.receivedFromPosition.trim()) next.receivedFromPosition = "This field is required.";
+    if (!header.receivedByName.trim()) next.receivedByName = "This field is required.";
+    if (!header.receivedByPosition.trim()) next.receivedByPosition = "This field is required.";
     const typeErrors = validateTypeFields(header.classification, header.type, header.code);
     if (typeErrors.type) next.propertyType = typeErrors.type;
     if (typeErrors.code) next.propertyCode = typeErrors.code;
@@ -187,6 +199,10 @@ export default function NewPropertyPage() {
         officeDepartment: header.officeDepartment,
         location: header.location,
         estimatedUsefulLife: item.estimatedUsefulLife,
+        receivedFromName: header.receivedFromName.trim(),
+        receivedFromPosition: header.receivedFromPosition.trim(),
+        receivedByName: header.receivedByName.trim(),
+        receivedByPosition: header.receivedByPosition.trim(),
         condition: header.condition,
         status: header.status,
         remarks: item.remarks,
@@ -341,6 +357,35 @@ export default function NewPropertyPage() {
             </Field>
           </section>
         ))}
+
+        <section className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
+          <h2 className="font-display break-words text-xl sm:text-2xl md:col-span-2">Received from</h2>
+          <Field label="Name" error={fieldErrors.receivedFromName}>
+            <Input
+              value={header.receivedFromName}
+              onChange={(e) => setHeader({ ...header, receivedFromName: e.target.value })}
+            />
+          </Field>
+          <Field label="Position" error={fieldErrors.receivedFromPosition}>
+            <Input
+              value={header.receivedFromPosition}
+              onChange={(e) => setHeader({ ...header, receivedFromPosition: e.target.value })}
+            />
+          </Field>
+          <h2 className="font-display break-words text-xl sm:text-2xl md:col-span-2">Received by</h2>
+          <Field label="Name" error={fieldErrors.receivedByName}>
+            <Input
+              value={header.receivedByName}
+              onChange={(e) => setHeader({ ...header, receivedByName: e.target.value })}
+            />
+          </Field>
+          <Field label="Position" error={fieldErrors.receivedByPosition}>
+            <Input
+              value={header.receivedByPosition}
+              onChange={(e) => setHeader({ ...header, receivedByPosition: e.target.value })}
+            />
+          </Field>
+        </section>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setItems((prev) => [...prev, emptyItem()])}>

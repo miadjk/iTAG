@@ -102,6 +102,10 @@ export interface PropertyRecord {
   officeDepartment: string;
   location: string;
   estimatedUsefulLife: string;
+  receivedFromName: string;
+  receivedFromPosition: string;
+  receivedByName: string;
+  receivedByPosition: string;
   condition: PropertyCondition;
   status: PropertyStatus;
   remarks: string;

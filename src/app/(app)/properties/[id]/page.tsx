@@ -261,6 +261,20 @@ function EditForm({
       <Field label="Useful life">
         <Input value={form.estimatedUsefulLife} onChange={(e) => setForm({ ...form, estimatedUsefulLife: e.target.value })} />
       </Field>
+      <p className="font-display break-words text-xl sm:text-2xl md:col-span-2">Received from</p>
+      <Field label="Name">
+        <Input value={form.receivedFromName || ""} onChange={(e) => setForm({ ...form, receivedFromName: e.target.value })} />
+      </Field>
+      <Field label="Position">
+        <Input value={form.receivedFromPosition || ""} onChange={(e) => setForm({ ...form, receivedFromPosition: e.target.value })} />
+      </Field>
+      <p className="font-display break-words text-xl sm:text-2xl md:col-span-2">Received by</p>
+      <Field label="Name">
+        <Input value={form.receivedByName || ""} onChange={(e) => setForm({ ...form, receivedByName: e.target.value })} />
+      </Field>
+      <Field label="Position">
+        <Input value={form.receivedByPosition || ""} onChange={(e) => setForm({ ...form, receivedByPosition: e.target.value })} />
+      </Field>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap md:col-span-2">
         <Button type="submit" className="w-full sm:w-auto">Update property</Button>
         <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={onCancel}>

@@ -22,6 +22,10 @@ export type AvrHeader = {
   custodianLastUser?: string;
   currentAccountablePerson?: string;
   dateAcquired?: string;
+  receivedFromName?: string;
+  receivedFromPosition?: string;
+  receivedByName?: string;
+  receivedByPosition?: string;
 };
 
 function asText(value: unknown) {
@@ -62,6 +66,10 @@ export function fillAvrWorksheet(sheet: ExcelJS.Worksheet, header: AvrHeader, it
   const fundCluster = asText(header.fundCluster);
   const custodian = asText(header.custodianLastUser || header.currentAccountablePerson);
   const acquired = displayDate(header.dateAcquired);
+  const receivedFromName = asText(header.receivedFromName);
+  const receivedFromPosition = asText(header.receivedFromPosition);
+  const receivedByName = asText(header.receivedByName) || custodian;
+  const receivedByPosition = asText(header.receivedByPosition);
 
   if (entity) writeCell(sheet, "A8", `Entity Name: ${entity}`);
   if (ics) writeCell(sheet, "G8", `ICS No : ${ics}`);
@@ -69,8 +77,10 @@ export function fillAvrWorksheet(sheet: ExcelJS.Worksheet, header: AvrHeader, it
     writeCell(sheet, "A9", `Fund Cluster : ${fundCluster}`);
   }
 
-  writeCell(sheet, "A37", null);
-  writeCell(sheet, "E37", custodian || null);
+  writeCell(sheet, "A37", receivedFromName || null);
+  writeCell(sheet, "A38", receivedFromPosition || null);
+  writeCell(sheet, "E37", receivedByName || null);
+  writeCell(sheet, "E38", receivedByPosition || null);
   writeCell(sheet, "A41", acquired || null);
 
   clearInventoryRows(sheet);
@@ -109,6 +119,10 @@ export function normalizeAvrPayload(body: unknown): { header: AvrHeader; items: 
       custodianLastUser: asText(data.custodianLastUser) || first.custodianLastUser,
       currentAccountablePerson: asText(data.currentAccountablePerson) || first.currentAccountablePerson,
       dateAcquired: asText(data.dateAcquired) || first.dateAcquired,
+      receivedFromName: asText(data.receivedFromName) || first.receivedFromName,
+      receivedFromPosition: asText(data.receivedFromPosition) || first.receivedFromPosition,
+      receivedByName: asText(data.receivedByName) || first.receivedByName,
+      receivedByPosition: asText(data.receivedByPosition) || first.receivedByPosition,
     },
     items,
   };

@@ -69,6 +69,10 @@ export async function POST(request: Request) {
         custodianLastUser: header.custodianLastUser,
         currentAccountablePerson: header.currentAccountablePerson,
         dateAcquired: header.dateAcquired,
+        receivedFromName: header.receivedFromName,
+        receivedFromPosition: header.receivedFromPosition,
+        receivedByName: header.receivedByName,
+        receivedByPosition: header.receivedByPosition,
       },
       items,
     );
@@ -83,6 +87,10 @@ export async function POST(request: Request) {
       { header: "Total Cost", key: "totalCost", width: 14 },
       { header: "Custodian", key: "custodian", width: 24 },
       { header: "Useful Life", key: "life", width: 16 },
+      { header: "Received From", key: "receivedFrom", width: 24 },
+      { header: "Received From Position", key: "receivedFromPosition", width: 22 },
+      { header: "Received By", key: "receivedBy", width: 24 },
+      { header: "Received By Position", key: "receivedByPosition", width: 22 },
     ];
     items.forEach((item) => {
       sheet.addRow({
@@ -94,6 +102,10 @@ export async function POST(request: Request) {
         totalCost: item.totalCost,
         custodian: item.custodianLastUser,
         life: item.estimatedUsefulLife,
+        receivedFrom: item.receivedFromName,
+        receivedFromPosition: item.receivedFromPosition,
+        receivedBy: item.receivedByName,
+        receivedByPosition: item.receivedByPosition,
       });
     });
   }

@@ -71,6 +71,10 @@ export function mapProperty(row: Row): PropertyRecord {
     officeDepartment: str(row.office_department),
     location: str(row.location),
     estimatedUsefulLife: str(row.estimated_useful_life),
+    receivedFromName: str(row.received_from_name),
+    receivedFromPosition: str(row.received_from_position),
+    receivedByName: str(row.received_by_name),
+    receivedByPosition: str(row.received_by_position),
     condition: (row.condition as PropertyRecord["condition"]) || "serviceable",
     status: (row.status as PropertyRecord["status"]) || "idle",
     remarks: str(row.remarks),
@@ -230,6 +234,10 @@ export function propertyInsert(input: {
   officeDepartment: string;
   location: string;
   estimatedUsefulLife: string;
+  receivedFromName: string;
+  receivedFromPosition: string;
+  receivedByName: string;
+  receivedByPosition: string;
   condition: string;
   status: string;
   remarks: string;
@@ -261,6 +269,10 @@ export function propertyInsert(input: {
     office_department: input.officeDepartment,
     location: input.location,
     estimated_useful_life: input.estimatedUsefulLife,
+    received_from_name: input.receivedFromName,
+    received_from_position: input.receivedFromPosition,
+    received_by_name: input.receivedByName,
+    received_by_position: input.receivedByPosition,
     condition: input.condition,
     status: input.status,
     remarks: input.remarks,
