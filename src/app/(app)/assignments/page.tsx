@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/field";
+import { DistrictSchoolFields, getSchoolName } from "@/components/location-fields";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useApp } from "@/lib/app-context";
 import { displayName, formatDate } from "@/lib/utils";
@@ -29,7 +30,8 @@ export default function AssignmentsPage() {
     assignedUserId: "",
     accountablePerson: "",
     officeDepartment: "",
-    location: "",
+    districtId: "",
+    schoolId: "",
     dateAssigned: new Date().toISOString().slice(0, 10),
     deadline: "",
     status: "pending" as const,
@@ -37,11 +39,17 @@ export default function AssignmentsPage() {
 
   const selectedProperty = schoolProperties.find((p) => p.id === form.propertyId);
   const selectedUser = schoolUsers.find((u) => u.id === form.assignedUserId);
+  const schoolLocation = getSchoolName(form.schoolId);
+  const registeredUsers = schoolUsers.filter((u) => u.role === "property_custodian" || u.role === "school_head");
 
   function requestSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.propertyId || !form.assignedUserId) {
-      setFormError("This field is required.");
+      setFormError("Property and assigned user are required.");
+      return;
+    }
+    if (!form.schoolId) {
+      setFormError("Select a school / location.");
       return;
     }
     setFormError("");
@@ -53,10 +61,16 @@ export default function AssignmentsPage() {
     setSaving(true);
     try {
       await assignProperty({
-        ...form,
+        propertyId: form.propertyId,
+        assignedUserId: form.assignedUserId,
         accountablePerson: selectedUser
           ? `${selectedUser.firstName} ${selectedUser.lastName}`
           : form.accountablePerson,
+        officeDepartment: form.officeDepartment,
+        location: schoolLocation,
+        dateAssigned: form.dateAssigned,
+        deadline: form.deadline,
+        status: form.status,
       });
       setFormError("");
       setConfirmOpen(false);
@@ -86,8 +100,8 @@ export default function AssignmentsPage() {
 
       {user?.role === "school_head" && can("assign") && open ? (
         <form className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSave}>
-          <Field label="Property">
-            <Select value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })}>
+          <Field label="Property" required>
+            <Select value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })} required>
               <option value="">Select property</option>
               {schoolProperties.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -96,20 +110,47 @@ export default function AssignmentsPage() {
               ))}
             </Select>
           </Field>
-          <Field label="Assign to user">
-            <Select value={form.assignedUserId} onChange={(e) => setForm({ ...form, assignedUserId: e.target.value })}>
+          <Field label="Assign to user" required>
+            <Select
+              value={form.assignedUserId}
+              onChange={(e) => {
+                const id = e.target.value;
+                const nextUser = registeredUsers.find((u) => u.id === id);
+                setForm({
+                  ...form,
+                  assignedUserId: id,
+                  accountablePerson: nextUser ? `${nextUser.firstName} ${nextUser.lastName}` : form.accountablePerson,
+                });
+              }}
+              required
+            >
               <option value="">Select user</option>
-              {schoolUsers
-                .filter((u) => u.role === "property_custodian")
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {displayName(u)}
-                  </option>
-                ))}
+              {registeredUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {displayName(u)}
+                </option>
+              ))}
             </Select>
           </Field>
-          <Field label="Details">
-            <Input value={form.accountablePerson} onChange={(e) => setForm({ ...form, accountablePerson: e.target.value })} placeholder="Accountable person / notes" />
+          <Field label="Accountable person">
+            <Input
+              value={form.accountablePerson}
+              onChange={(e) => setForm({ ...form, accountablePerson: e.target.value })}
+              readOnly={Boolean(selectedUser)}
+            />
+          </Field>
+          <Field label="Office / department">
+            <Input value={form.officeDepartment} onChange={(e) => setForm({ ...form, officeDepartment: e.target.value })} />
+          </Field>
+          <DistrictSchoolFields
+            districtId={form.districtId}
+            schoolId={form.schoolId}
+            districtLabelText="District / Direction"
+            schoolLabelText="School / Location"
+            onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
+          />
+          <Field label="Date assigned">
+            <Input type="date" value={form.dateAssigned} onChange={(e) => setForm({ ...form, dateAssigned: e.target.value })} />
           </Field>
           <Field label="Deadline">
             <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
@@ -157,6 +198,9 @@ export default function AssignmentsPage() {
           <>
             <p>Property: {selectedProperty?.description || "—"}</p>
             <p>Assigned user: {selectedUser ? displayName(selectedUser) : "—"}</p>
+            <p>Accountable person: {form.accountablePerson || "—"}</p>
+            <p>Office / department: {form.officeDepartment || "—"}</p>
+            <p>School / location: {schoolLocation || "—"}</p>
             {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
           </>
         }

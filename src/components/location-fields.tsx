@@ -1,6 +1,6 @@
 "use client";
 
-import { districts, municipalities, provinces, regions, schools } from "@/lib/locations";
+import { districts, municipalities, provinces, regions, schools, getSchoolName } from "@/lib/locations";
 import { Field, Select } from "@/components/ui/field";
 
 export type LocationValue = {
@@ -10,6 +10,68 @@ export type LocationValue = {
   districtId: string;
   schoolId: string;
 };
+
+export function districtLabel(districtId: string) {
+  const district = districts.find((d) => d.id === districtId);
+  if (!district) return districtId;
+  const municipality = municipalities.find((m) => m.id === district.municipalityId);
+  return municipality ? `${municipality.name} ${district.name}` : district.name;
+}
+
+/** District/Direction → School dependent dropdowns for Assign and Transfer flows. */
+export function DistrictSchoolFields({
+  districtId,
+  schoolId,
+  onChange,
+  districtLabelText = "District / Direction",
+  schoolLabelText = "School / Location",
+  errors,
+}: {
+  districtId: string;
+  schoolId: string;
+  onChange: (next: { districtId: string; schoolId: string }) => void;
+  districtLabelText?: string;
+  schoolLabelText?: string;
+  errors?: { districtId?: string; schoolId?: string };
+}) {
+  const schoolOptions = schools.filter((s) => s.districtId === districtId);
+  const schoolValid = !schoolId || schoolOptions.some((s) => s.id === schoolId);
+
+  return (
+    <>
+      <Field label={districtLabelText} error={errors?.districtId}>
+        <Select
+          value={districtId}
+          onChange={(e) => onChange({ districtId: e.target.value, schoolId: "" })}
+        >
+          <option value="">Select district</option>
+          {districts.map((d) => (
+            <option key={d.id} value={d.id}>
+              {districtLabel(d.id)}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field label={schoolLabelText} error={errors?.schoolId}>
+        <Select
+          key={`school-${districtId}`}
+          value={schoolValid ? schoolId : ""}
+          onChange={(e) => onChange({ districtId, schoolId: e.target.value })}
+          disabled={!districtId}
+        >
+          <option value="">Select school</option>
+          {schoolOptions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    </>
+  );
+}
+
+export { getSchoolName };
 
 export function LocationFields({
   value,

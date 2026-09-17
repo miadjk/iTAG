@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
+import { DistrictSchoolFields, getSchoolName } from "@/components/location-fields";
 import { type PropertyInput, useApp, CLASSIFICATIONS } from "@/lib/app-context";
 import { ScanResult } from "@/components/scan-result";
 import { downloadPropertyExcel } from "@/lib/files";
@@ -30,6 +31,8 @@ export default function PropertyDetailPage() {
   const { state, schoolProperties, can, assignProperty, transferProperty, updateProperty, deleteProperty, schoolUsers } = useApp();
   const property = schoolProperties.find((p) => p.id === params.id) ?? state.properties.find((p) => p.id === params.id);
   const [editing, setEditing] = useState(search.get("edit") === "1");
+  const [showAssign, setShowAssign] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
   const created = search.get("created") === "1";
   const scanned = search.get("scan") === "1";
 
@@ -47,6 +50,30 @@ export default function PropertyDetailPage() {
         description={`Item No. ${property.inventoryItemNumber} · ICSNO. ${property.icsNumber}`}
         actions={
           <div className="flex flex-wrap gap-2">
+            {can("assign") ? (
+              <Button
+                type="button"
+                variant={showAssign ? "secondary" : "primary"}
+                onClick={() => {
+                  setShowAssign((v) => !v);
+                  setShowTransfer(false);
+                }}
+              >
+                {showAssign ? "Close assign" : "Assign"}
+              </Button>
+            ) : null}
+            {can("transfer") ? (
+              <Button
+                type="button"
+                variant={showTransfer ? "secondary" : "primary"}
+                onClick={() => {
+                  setShowTransfer((v) => !v);
+                  setShowAssign(false);
+                }}
+              >
+                {showTransfer ? "Close transfer" : "Transfer"}
+              </Button>
+            ) : null}
             {can("encode") && !editing ? (
               <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
                 <Pencil className="h-4 w-4" /> Edit
@@ -94,7 +121,7 @@ export default function PropertyDetailPage() {
             </section>
           )}
 
-          {can("assign") ? (
+          {can("assign") && showAssign ? (
             <AssignForm
               property={property}
               users={schoolUsers}
@@ -103,14 +130,23 @@ export default function PropertyDetailPage() {
                 officeDepartment: property.officeDepartment,
                 location: property.location,
               }}
-              onSave={(input) => assignProperty(input)}
+              onSave={async (input) => {
+                await assignProperty(input);
+                setShowAssign(false);
+              }}
             />
           ) : null}
 
-          {can("transfer") ? (
+          {can("transfer") && showTransfer ? (
             <section className="surface p-4 sm:p-5">
               <h2 className="font-display break-words text-xl sm:text-2xl">Transfer property</h2>
-              <TransferForm property={property} onSave={transferProperty} />
+              <TransferForm
+                property={property}
+                onSave={async (input) => {
+                  await transferProperty(input);
+                  setShowTransfer(false);
+                }}
+              />
             </section>
           ) : null}
 
@@ -297,25 +333,37 @@ function AssignForm({
   defaults: { accountablePerson: string; officeDepartment: string; location: string };
   onSave: ReturnType<typeof useApp>["assignProperty"];
 }) {
-  const custodians = users.filter((u) => u.role === "property_custodian");
+  const registeredUsers = users.filter((u) => u.role === "property_custodian" || u.role === "school_head");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
     assignedUserId: "",
     accountablePerson: defaults.accountablePerson,
     officeDepartment: defaults.officeDepartment,
-    location: defaults.location,
+    districtId: "",
+    schoolId: "",
     dateAssigned: new Date().toISOString().slice(0, 10),
     deadline: "",
     status: "active" as const,
   });
-  const selectedUser = custodians.find((u) => u.id === form.assignedUserId);
+  const selectedUser = registeredUsers.find((u) => u.id === form.assignedUserId);
+  const schoolLocation = getSchoolName(form.schoolId);
   const assignedLabel = selectedUser
     ? `${selectedUser.firstName} ${selectedUser.lastName}`
     : form.accountablePerson || "—";
 
   function requestSave(e: React.FormEvent) {
     e.preventDefault();
+    setFormError("");
+    if (!form.assignedUserId) {
+      setFormError("Select a user to assign.");
+      return;
+    }
+    if (!form.schoolId) {
+      setFormError("Select a school / location.");
+      return;
+    }
     setConfirmOpen(true);
   }
 
@@ -323,9 +371,19 @@ function AssignForm({
     if (saving) return;
     setSaving(true);
     try {
-      await onSave({ propertyId: property.id, ...form });
+      await onSave({
+        propertyId: property.id,
+        assignedUserId: form.assignedUserId,
+        accountablePerson: assignedLabel,
+        officeDepartment: form.officeDepartment,
+        location: schoolLocation,
+        dateAssigned: form.dateAssigned,
+        deadline: form.deadline,
+        status: form.status,
+      });
       setConfirmOpen(false);
-    } catch {
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Unable to save assignment.");
       setConfirmOpen(false);
     } finally {
       setSaving(false);
@@ -336,10 +394,22 @@ function AssignForm({
     <section className="surface p-4 sm:p-5">
       <h2 className="font-display break-words text-xl sm:text-2xl">Assign property</h2>
       <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={requestSave}>
-        <Field label="Assign to user">
-          <Select value={form.assignedUserId} onChange={(e) => setForm({ ...form, assignedUserId: e.target.value })}>
-            <option value="">Select user (optional)</option>
-            {custodians.map((u) => (
+        <Field label="Assign to user" required>
+          <Select
+            value={form.assignedUserId}
+            onChange={(e) => {
+              const id = e.target.value;
+              const user = registeredUsers.find((u) => u.id === id);
+              setForm({
+                ...form,
+                assignedUserId: id,
+                accountablePerson: user ? `${user.firstName} ${user.lastName}` : form.accountablePerson,
+              });
+            }}
+            required
+          >
+            <option value="">Select user</option>
+            {registeredUsers.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.firstName} {u.lastName}
               </option>
@@ -347,20 +417,29 @@ function AssignForm({
           </Select>
         </Field>
         <Field label="Accountable person">
-          <Input value={form.accountablePerson} onChange={(e) => setForm({ ...form, accountablePerson: e.target.value })} />
+          <Input
+            value={form.accountablePerson}
+            onChange={(e) => setForm({ ...form, accountablePerson: e.target.value })}
+            readOnly={Boolean(selectedUser)}
+          />
         </Field>
         <Field label="Office / department">
           <Input value={form.officeDepartment} onChange={(e) => setForm({ ...form, officeDepartment: e.target.value })} />
         </Field>
-        <Field label="Location">
-          <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-        </Field>
+        <DistrictSchoolFields
+          districtId={form.districtId}
+          schoolId={form.schoolId}
+          districtLabelText="District / Direction"
+          schoolLabelText="School / Location"
+          onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
+        />
         <Field label="Date assigned">
           <Input type="date" value={form.dateAssigned} onChange={(e) => setForm({ ...form, dateAssigned: e.target.value })} />
         </Field>
         <Field label="Deadline">
           <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
         </Field>
+        {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
         <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
       </form>
 
@@ -372,7 +451,11 @@ function AssignForm({
           <>
             <p>Property: {property.description || "—"}</p>
             <p>Assigned user: {assignedLabel}</p>
-            <p>Location: {form.location || "—"}</p>
+            <p>Accountable person: {form.accountablePerson || assignedLabel}</p>
+            <p>Office / department: {form.officeDepartment || "—"}</p>
+            <p>School / location: {schoolLocation || "—"}</p>
+            <p>Date assigned: {form.dateAssigned || "—"}</p>
+            {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
           </>
         }
         confirmLabel="Confirm Assignment"
@@ -393,16 +476,32 @@ function TransferForm({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
     newAccountablePerson: "",
     newOffice: "",
-    newLocation: "",
+    districtId: "",
+    schoolId: "",
     date: new Date().toISOString().slice(0, 10),
     reason: "",
   });
+  const newSchoolLocation = getSchoolName(form.schoolId);
 
   function requestSave(e: React.FormEvent) {
     e.preventDefault();
+    setFormError("");
+    if (!form.newAccountablePerson.trim()) {
+      setFormError("New accountable person is required.");
+      return;
+    }
+    if (!form.schoolId) {
+      setFormError("Select a new school / location.");
+      return;
+    }
+    if (!form.reason.trim()) {
+      setFormError("Reason is required.");
+      return;
+    }
     setConfirmOpen(true);
   }
 
@@ -410,9 +509,17 @@ function TransferForm({
     if (saving) return;
     setSaving(true);
     try {
-      await onSave({ propertyId: property.id, ...form });
+      await onSave({
+        propertyId: property.id,
+        newAccountablePerson: form.newAccountablePerson,
+        newOffice: form.newOffice,
+        newLocation: newSchoolLocation,
+        date: form.date,
+        reason: form.reason,
+      });
       setConfirmOpen(false);
-    } catch {
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Unable to save transfer.");
       setConfirmOpen(false);
     } finally {
       setSaving(false);
@@ -422,23 +529,32 @@ function TransferForm({
   return (
     <>
       <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={requestSave}>
-        <Field label="New accountable person">
-          <Input value={form.newAccountablePerson} onChange={(e) => setForm({ ...form, newAccountablePerson: e.target.value })} />
+        <Field label="New accountable person" required>
+          <Input
+            value={form.newAccountablePerson}
+            onChange={(e) => setForm({ ...form, newAccountablePerson: e.target.value })}
+            required
+          />
         </Field>
-        <Field label="New office">
+        <Field label="New office / department">
           <Input value={form.newOffice} onChange={(e) => setForm({ ...form, newOffice: e.target.value })} />
         </Field>
-        <Field label="New location">
-          <Input value={form.newLocation} onChange={(e) => setForm({ ...form, newLocation: e.target.value })} />
-        </Field>
-        <Field label="Date">
+        <DistrictSchoolFields
+          districtId={form.districtId}
+          schoolId={form.schoolId}
+          districtLabelText="New district / direction"
+          schoolLabelText="New school / location"
+          onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
+        />
+        <Field label="Transfer date">
           <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
         </Field>
         <div className="md:col-span-2">
-          <Field label="Reason">
-            <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+          <Field label="Reason" required>
+            <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required />
           </Field>
         </div>
+        {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
         <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Confirm transfer</Button>
       </form>
 
@@ -451,9 +567,11 @@ function TransferForm({
             <p>Property: {property.description || "—"}</p>
             <p>Current accountable person: {property.currentAccountablePerson || "—"}</p>
             <p>New accountable person: {form.newAccountablePerson || "—"}</p>
+            <p>Current office: {property.officeDepartment || "—"}</p>
+            <p>New office: {form.newOffice || "—"}</p>
             <p>Current location: {property.location || "—"}</p>
-            <p>New location: {form.newLocation || "—"}</p>
-            <p>Date: {form.date || "—"}</p>
+            <p>New school / location: {newSchoolLocation || "—"}</p>
+            <p>Transfer date: {form.date || "—"}</p>
             {form.reason ? <p>Reason: {form.reason}</p> : null}
           </>
         }
