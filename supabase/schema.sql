@@ -779,7 +779,7 @@ begin
 
   if p_type = 'out' then
     if p_quantity > v_prev then
-      raise exception 'Insufficient stock. Only % units are currently available.', trim(to_char(v_prev, 'FM999999999990.######'));
+      raise exception 'Insufficient stock. Available quantity: %.', trim(to_char(v_prev, 'FM999999999990.######'));
     end if;
     v_new := v_prev - p_quantity;
   else

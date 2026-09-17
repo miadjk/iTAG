@@ -782,7 +782,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const supply = mapSupply(live.data);
     const previous = supply.currentQuantity;
     if (input.type === "out" && input.quantity > previous) {
-      throw new Error(`Insufficient stock. Only ${previous} units are currently available.`);
+      throw new Error(`Insufficient stock. Available quantity: ${previous}.`);
     }
     const next = input.type === "in" ? previous + input.quantity : previous - input.quantity;
     const status = deriveSupplyStatus(next, supply.minimumStockLevel);

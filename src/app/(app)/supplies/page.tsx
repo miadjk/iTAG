@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Warehouse } from "lucide-react";
+import { Search, Warehouse } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +18,7 @@ export default function SuppliesPage() {
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [historySupplyId, setHistorySupplyId] = useState("");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -39,6 +40,18 @@ export default function SuppliesPage() {
     position: "",
     remarks: "",
   });
+
+  const filteredSupplies = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return schoolSupplies;
+    return schoolSupplies.filter((s) => {
+      const haystack = [s.name, s.type, s.unit, s.code, s.description, s.location]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [schoolSupplies, query]);
 
   const historySupply = schoolSupplies.find((s) => s.id === historySupplyId) ?? null;
   const supplyHistory = useMemo(() => {
@@ -186,27 +199,42 @@ export default function SuppliesPage() {
         <EmptyState icon={Warehouse} title="No supplies yet." body="Bond paper, pens, ink, toner, and other replenished items are managed here." />
       ) : (
         <div className="space-y-3">
-          {schoolSupplies.map((s) => (
-            <article key={s.id} className="surface p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1 text-sm">
-                  <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {s.currentQuantity} {s.unit} · min {s.minimumStockLevel} · {s.location || "No location"}
-                  </p>
-                  {s.classification ? (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search supplies..."
+              className="pl-10"
+              aria-label="Search supplies"
+            />
+          </div>
+          {filteredSupplies.length === 0 ? (
+            <p className="surface p-4 text-sm text-[var(--text-muted)]">No supplies found.</p>
+          ) : (
+            filteredSupplies.map((s) => (
+              <article key={s.id} className="surface p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1 text-sm">
+                    <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
                     <p className="text-xs text-[var(--text-muted)]">
-                      Classification: {classLabel(s.classification)}
-                      {s.type ? ` · Type: ${s.type}` : ""}
-                      {s.code ? ` · Code: ${s.code}` : ""}
+                      Current stock: {s.currentQuantity} {s.unit} · Minimum stock: {s.minimumStockLevel}
+                      {s.location ? ` · ${s.location}` : ""}
                     </p>
-                  ) : null}
-                  {s.description ? <p className="text-xs text-[var(--text)]">{s.description}</p> : null}
+                    {s.classification ? (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Classification: {classLabel(s.classification)}
+                        {s.type ? ` · Type: ${s.type}` : ""}
+                        {s.code ? ` · Code: ${s.code}` : ""}
+                      </p>
+                    ) : null}
+                    {s.description ? <p className="text-xs text-[var(--text)]">{s.description}</p> : null}
+                  </div>
+                  {supplyStatusBadge(s.status)}
                 </div>
-                {supplyStatusBadge(s.status)}
-              </div>
-            </article>
-          ))}
+              </article>
+            ))
+          )}
         </div>
       )}
 
