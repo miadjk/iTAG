@@ -578,18 +578,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const assignedUser = input.assignedUserId ? schoolUsers.find((p) => p.id === input.assignedUserId) : undefined;
     const accountablePerson = assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : input.accountablePerson.trim();
     if (!accountablePerson) throw new Error("Accountable person is required.");
-    const assignedAt = manilaDateOnly();
-    const inserted = await client.from("property_assignments").insert({
-      property_id: input.propertyId,
-      accountable_person: accountablePerson,
-      assigned_user_id: input.assignedUserId || null,
-      office_department: input.officeDepartment,
-      location: input.location,
-      date_assigned: assignedAt,
-      deadline: null,
-      status: input.status ?? "active",
-      assigned_by: user.id,
-    });
+    // created_at (timestamptz default now()) is the authoritative transaction time shown in the UI.
+    // date_assigned fills the legacy date column at insert time; deadline is never required.
+    const inserted = await client
+      .from("property_assignments")
+      .insert({
+        property_id: input.propertyId,
+        accountable_person: accountablePerson,
+        assigned_user_id: input.assignedUserId || null,
+        office_department: input.officeDepartment,
+        location: input.location,
+        date_assigned: manilaDateOnly(),
+        deadline: null,
+        status: input.status ?? "active",
+        assigned_by: user.id,
+      })
+      .select("id, created_at")
+      .single();
     throwIfError(inserted.error, "Unable to save assignment.");
     const updated = await client
       .from("properties")
@@ -657,19 +662,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!input.newAccountablePerson.trim() || !input.reason.trim()) {
       throw new Error("New accountable person and reason are required.");
     }
-    const transferredAt = manilaDateOnly();
-    const inserted = await client.from("property_transfers").insert({
-      property_id: input.propertyId,
-      previous_accountable_person: current.currentAccountablePerson,
-      new_accountable_person: input.newAccountablePerson.trim(),
-      previous_office: current.officeDepartment,
-      new_office: input.newOffice,
-      previous_location: current.location,
-      new_location: input.newLocation,
-      date: transferredAt,
-      reason: input.reason.trim(),
-      performed_by: user.id,
-    });
+    // created_at (timestamptz default now()) is the authoritative transaction time.
+    // date is set at insert (transfers have no UPDATE RLS policy); UI displays created_at.
+    const inserted = await client
+      .from("property_transfers")
+      .insert({
+        property_id: input.propertyId,
+        previous_accountable_person: current.currentAccountablePerson,
+        new_accountable_person: input.newAccountablePerson.trim(),
+        previous_office: current.officeDepartment,
+        new_office: input.newOffice,
+        previous_location: current.location,
+        new_location: input.newLocation,
+        date: manilaDateOnly(),
+        reason: input.reason.trim(),
+        performed_by: user.id,
+      })
+      .select("id, created_at")
+      .single();
     throwIfError(inserted.error, "Unable to save transfer.");
     const updated = await client
       .from("properties")

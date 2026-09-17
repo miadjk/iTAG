@@ -40,7 +40,10 @@ export function DistrictSchoolFields({
   const districtOptions = luponOnly
     ? districts.filter((d) => d.municipalityId === "lupon")
     : districts;
-  const schoolOptions = schools.filter((s) => s.districtId === districtId);
+  const allowedDistrictIds = new Set(districtOptions.map((d) => d.id));
+  const schoolOptions = schools.filter(
+    (s) => s.districtId === districtId && (!luponOnly || allowedDistrictIds.has(s.districtId)),
+  );
   const schoolValid = !schoolId || schoolOptions.some((s) => s.id === schoolId);
 
   return (
