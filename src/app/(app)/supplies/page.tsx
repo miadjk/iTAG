@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { Search, Warehouse } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { useApp } from "@/lib/app-context";
 import { classLabel, supplyStatusBadge } from "@/components/badges";
 import { codeForType, CONSUMABLE_TYPES, validateTypeFields } from "@/lib/property-types";
@@ -15,10 +16,13 @@ import type { PropertyClassification } from "@/types";
 export default function SuppliesPage() {
   const { schoolSupplies, can, upsertSupply, stockIn, stockOut, state } = useApp();
   const [open, setOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [historySupplyId, setHistorySupplyId] = useState("");
   const [query, setQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirmKind, setConfirmKind] = useState<"supply" | "stock" | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -45,7 +49,7 @@ export default function SuppliesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return schoolSupplies;
     return schoolSupplies.filter((s) => {
-      const haystack = [s.name, s.type, s.unit, s.code, s.description, s.location]
+      const haystack = [s.name, s.type, s.unit, s.code, s.location]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -66,6 +70,8 @@ export default function SuppliesPage() {
     return rows;
   }, [state.stockTransactions, historySupplyId]);
 
+  const selectedStockSupply = schoolSupplies.find((s) => s.id === stock.supplyId);
+
   function setConsumableType(typeLabel: string) {
     setForm((prev) => ({
       ...prev,
@@ -74,7 +80,22 @@ export default function SuppliesPage() {
     }));
   }
 
-  async function onSaveSupply(e: React.FormEvent) {
+  function resetForm() {
+    setForm({
+      name: "",
+      description: "",
+      unit: "ream",
+      currentQuantity: "",
+      minimumStockLevel: "",
+      location: "",
+      remarks: "",
+      classification: "consumable",
+      type: "",
+      code: "",
+    });
+  }
+
+  function requestSaveSupply(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
     const typeErrors = validateTypeFields(form.classification, form.type, form.code);
@@ -82,27 +103,83 @@ export default function SuppliesPage() {
       setFormError(typeErrors.type || typeErrors.code || "Select a valid type.");
       return;
     }
+    if (!form.name.trim()) {
+      setFormError("Supply name is required.");
+      return;
+    }
+    setConfirmKind("supply");
+  }
+
+  function requestSaveStock(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!stock.supplyId) {
+      setError("Select a supply.");
+      return;
+    }
+    if (!(Number(stock.quantity) > 0)) {
+      setError("Enter a valid quantity.");
+      return;
+    }
+    setConfirmKind("stock");
+  }
+
+  async function confirmSaveSupply() {
+    if (saving) return;
+    setSaving(true);
     try {
       await upsertSupply({
         ...form,
+        description: "",
+        remarks: "",
         currentQuantity: Number(form.currentQuantity) || 0,
         minimumStockLevel: Number(form.minimumStockLevel) || 0,
       });
       setOpen(false);
-      setForm({
-        name: "",
-        description: "",
-        unit: "ream",
-        currentQuantity: "",
-        minimumStockLevel: "",
-        location: "",
-        remarks: "",
-        classification: "consumable",
-        type: "",
-        code: "",
-      });
+      resetForm();
+      setConfirmKind(null);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Unable to save supply.");
+      setConfirmKind(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmSaveStock() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const qty = Number(stock.quantity) || 0;
+      if (stock.type === "in") {
+        await stockIn({
+          supplyId: stock.supplyId,
+          quantity: qty,
+          date: stock.date,
+          receivedBy: stock.receivedBy,
+          position: stock.position,
+          remarks: stock.remarks,
+          reference: stock.remarks,
+        });
+      } else {
+        await stockOut({
+          supplyId: stock.supplyId,
+          quantity: qty,
+          date: stock.date,
+          receivedBy: stock.receivedBy,
+          position: stock.position,
+          remarks: stock.remarks,
+        });
+      }
+      setStock((prev) => ({ ...prev, quantity: "", receivedBy: "", position: "", remarks: "" }));
+      setHistorySupplyId(stock.supplyId);
+      setConfirmKind(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to record stock movement.");
+      setConfirmKind(null);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -114,15 +191,93 @@ export default function SuppliesPage() {
         description="Track stock-in, stock-out, current quantity, low-stock status, and supply history separately from properties."
         actions={
           can("supplies") ? (
-            <Button type="button" onClick={() => setOpen((v) => !v)}>
-              {open ? "Close form" : "Add supply"}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setOpen((v) => !v);
+                  if (!open) setShowHistory(false);
+                }}
+              >
+                {open ? "Close form" : "Add Supply"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowHistory((v) => !v);
+                  if (!showHistory) setOpen(false);
+                }}
+              >
+                {showHistory ? "Close History" : "View History"}
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+              {showHistory ? "Close History" : "View History"}
             </Button>
-          ) : null
+          )
         }
       />
 
+      {showHistory ? (
+        <section className="surface mb-6 p-4 sm:p-5">
+          <h2 className="font-display break-words text-xl sm:text-2xl">Supply history</h2>
+          {schoolSupplies.length > 0 ? (
+            <div className="mt-4 max-w-md">
+              <Field label="Filter by supply">
+                <Select value={historySupplyId} onChange={(e) => setHistorySupplyId(e.target.value)}>
+                  <option value="">All supplies</option>
+                  {schoolSupplies.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          ) : null}
+          {historySupply ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {historySupply.name} · Current stock: {historySupply.currentQuantity} {historySupply.unit}
+            </p>
+          ) : null}
+          <div className="mt-4 space-y-2">
+            {supplyHistory.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No stock movements yet.</p>
+            ) : (
+              supplyHistory.map((t) => {
+                const supply = schoolSupplies.find((s) => s.id === t.supplyId);
+                return (
+                  <article key={t.id} className="border border-[var(--border)] p-3 text-sm">
+                    <p className="uppercase tracking-widest text-[11px] text-[var(--text-muted)]">
+                      {supply?.name || "Supply"} · {t.type === "in" ? "Stock In" : "Stock Out"}
+                    </p>
+                    <p className="mt-1">
+                      Quantity: {t.type === "in" ? "+" : "-"}
+                      {t.quantity} {supply?.unit || ""}
+                    </p>
+                    <p>
+                      Previous: {t.previousQuantity} → New: {t.newQuantity}
+                    </p>
+                    <p>Date: {formatLongDate(t.date) || t.date || "—"}</p>
+                    {t.receivedBy ? (
+                      <p>
+                        Received by: {t.receivedBy}
+                        {t.position ? ` · ${t.position}` : ""}
+                      </p>
+                    ) : null}
+                    {t.purpose || t.reference ? <p>Remarks/Purpose: {t.purpose || t.reference}</p> : null}
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {can("supplies") && open ? (
-        <form className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={onSaveSupply} noValidate>
+        <form className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSaveSupply} noValidate>
           <Field label="Supply name" required>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
@@ -182,14 +337,6 @@ export default function SuppliesPage() {
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
           </Field>
-          <Field label="Description">
-            <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </Field>
-          <div className="md:col-span-2">
-            <Field label="Remarks">
-              <Textarea value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
-            </Field>
-          </div>
           {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
           <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save supply</Button>
         </form>
@@ -228,7 +375,6 @@ export default function SuppliesPage() {
                         {s.code ? ` · Code: ${s.code}` : ""}
                       </p>
                     ) : null}
-                    {s.description ? <p className="text-xs text-[var(--text)]">{s.description}</p> : null}
                   </div>
                   {supplyStatusBadge(s.status)}
                 </div>
@@ -239,39 +385,7 @@ export default function SuppliesPage() {
       )}
 
       {can("supplies") && schoolSupplies.length > 0 ? (
-        <form
-          className="surface mt-8 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setError("");
-            try {
-              const qty = Number(stock.quantity) || 0;
-              if (stock.type === "in") {
-                await stockIn({
-                  supplyId: stock.supplyId,
-                  quantity: qty,
-                  date: stock.date,
-                  receivedBy: stock.receivedBy,
-                  position: stock.position,
-                  remarks: stock.remarks,
-                });
-              } else {
-                await stockOut({
-                  supplyId: stock.supplyId,
-                  quantity: qty,
-                  date: stock.date,
-                  receivedBy: stock.receivedBy,
-                  position: stock.position,
-                  remarks: stock.remarks,
-                });
-              }
-              setStock((prev) => ({ ...prev, quantity: "", receivedBy: "", position: "", remarks: "" }));
-              setHistorySupplyId(stock.supplyId);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Unable to record stock movement.");
-            }
-          }}
-        >
+        <form className="surface mt-8 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSaveStock}>
           <h2 className="font-display text-2xl md:col-span-2">Stock-in / stock-out</h2>
           <Field label="Supply" required>
             <Select value={stock.supplyId} onChange={(e) => setStock({ ...stock, supplyId: e.target.value })} required>
@@ -308,7 +422,7 @@ export default function SuppliesPage() {
             <Input value={stock.position} onChange={(e) => setStock({ ...stock, position: e.target.value })} />
           </Field>
           <div className="md:col-span-2">
-            <Field label="Remarks / purpose">
+            <Field label={stock.type === "in" ? "Reference / remarks" : "Purpose / remarks"}>
               <Input value={stock.remarks} onChange={(e) => setStock({ ...stock, remarks: e.target.value })} />
             </Field>
           </div>
@@ -319,54 +433,55 @@ export default function SuppliesPage() {
         </form>
       ) : null}
 
-      <section className="mt-8">
-        <h2 className="font-display text-2xl">Supply history</h2>
-        {schoolSupplies.length > 0 ? (
-          <div className="mt-4 max-w-md">
-            <Field label="Filter by supply">
-              <Select value={historySupplyId} onChange={(e) => setHistorySupplyId(e.target.value)}>
-                <option value="">All supplies</option>
-                {schoolSupplies.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-        ) : null}
-        {historySupply ? (
-          <p className="mt-3 text-sm text-[var(--text-muted)]">
-            {historySupply.name} · Current stock: {historySupply.currentQuantity} {historySupply.unit}
-          </p>
-        ) : null}
-        <div className="mt-4 space-y-2">
-          {supplyHistory.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No stock movements yet.</p>
-          ) : (
-            supplyHistory.slice(0, 40).map((t) => {
-              const supply = schoolSupplies.find((s) => s.id === t.supplyId);
-              return (
-                <article key={t.id} className="border border-[var(--border)] p-3 text-sm">
-                  <p className="uppercase tracking-widest text-[11px] text-[var(--text-muted)]">
-                    {supply?.name || "Supply"} · {t.type === "in" ? "Stock In" : "Stock Out"}
-                  </p>
-                  <p className="mt-1">
-                    Quantity: {t.type === "in" ? "+" : "-"}
-                    {t.quantity}
-                  </p>
-                  <p>
-                    Previous: {t.previousQuantity} → New: {t.newQuantity}
-                  </p>
-                  <p>Date: {formatLongDate(t.date) || t.date || "—"}</p>
-                  {t.receivedBy ? <p>Received by: {t.receivedBy}{t.position ? ` · ${t.position}` : ""}</p> : null}
-                  {t.purpose || t.reference ? <p>Remarks/Purpose: {t.purpose || t.reference}</p> : null}
-                </article>
-              );
-            })
-          )}
-        </div>
-      </section>
+      <ConfirmDialog
+        open={confirmKind === "supply"}
+        title="Confirm supply"
+        message="Are you sure you want to save this supply?"
+        details={
+          <>
+            <p>Name: {form.name || "—"}</p>
+            <p>Unit: {form.unit || "—"}</p>
+            <p>Type: {form.type || "—"}</p>
+            <p>Code: {form.code || "—"}</p>
+            <p>Initial quantity: {form.currentQuantity || "0"}</p>
+            <p>Minimum stock: {form.minimumStockLevel || "0"}</p>
+            <p>Location: {form.location || "—"}</p>
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmKind(null)}
+        onConfirm={confirmSaveSupply}
+      />
+
+      <ConfirmDialog
+        open={confirmKind === "stock"}
+        title={stock.type === "out" ? "Confirm stock-out" : "Confirm stock-in"}
+        message={
+          stock.type === "out"
+            ? "Are you sure you want to deduct this stock?"
+            : "Are you sure you want to record this stock-in?"
+        }
+        details={
+          <>
+            <p>Supply: {selectedStockSupply?.name || "—"}</p>
+            <p>
+              Quantity: {stock.quantity || "0"} {selectedStockSupply?.unit || ""}
+            </p>
+            {stock.type === "out" ? (
+              <p>Current stock: {selectedStockSupply?.currentQuantity ?? "—"}</p>
+            ) : null}
+            <p>Date: {stock.date || "—"}</p>
+            <p>Received by: {stock.receivedBy || "—"}</p>
+            <p>Position: {stock.position || "—"}</p>
+            <p>{stock.type === "in" ? "Reference" : "Purpose"}: {stock.remarks || "—"}</p>
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmKind(null)}
+        onConfirm={confirmSaveStock}
+      />
     </div>
   );
 }

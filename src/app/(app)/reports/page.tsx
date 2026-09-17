@@ -9,7 +9,7 @@ import { useApp } from "@/lib/app-context";
 import { classLabel, conditionBadge, propertyStatusBadge, supplyStatusBadge } from "@/components/badges";
 import { Field, Select } from "@/components/ui/field";
 import { formatLongDate } from "@/lib/utils";
-import type { PropertyRecord } from "@/types";
+import type { ConsumableSupply, PropertyRecord, StockTransaction } from "@/types";
 
 const REPORTS = [
   "Complete Property Inventory",
@@ -40,6 +40,41 @@ function propertyRows(report: ReportType, properties: PropertyRecord[]) {
   }
 }
 
+function formatReportDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
+
+function supplyNameFor(tx: StockTransaction, supplies: ConsumableSupply[]) {
+  return supplies.find((s) => s.id === tx.supplyId)?.name || "Supply";
+}
+
+function supplyUnitFor(tx: StockTransaction, supplies: ConsumableSupply[]) {
+  return supplies.find((s) => s.id === tx.supplyId)?.unit || "";
+}
+
+function stockOutLine(tx: StockTransaction, supplies: ConsumableSupply[]) {
+  const name = supplyNameFor(tx, supplies);
+  const unit = supplyUnitFor(tx, supplies);
+  const qty = unit ? `${tx.quantity} ${unit}` : String(tx.quantity);
+  const recipient = tx.recipient || tx.receivedBy || "—";
+  const purpose = tx.purpose || tx.reference || "—";
+  return `${name} | ${qty} | ${recipient} | ${purpose} | ${formatReportDate(tx.date)}`;
+}
+
+function stockInLine(tx: StockTransaction, supplies: ConsumableSupply[]) {
+  const name = supplyNameFor(tx, supplies);
+  const unit = supplyUnitFor(tx, supplies);
+  const qty = unit ? `${tx.quantity} ${unit}` : String(tx.quantity);
+  const reference = tx.reference || tx.purpose || "—";
+  return `${name} | ${qty} | ${reference} | ${formatReportDate(tx.date)}`;
+}
+
 export default function ReportsPage() {
   const { schoolProperties, schoolSupplies, state, saveReport, user } = useApp();
   const [report, setReport] = useState<ReportType>("Complete Property Inventory");
@@ -64,11 +99,29 @@ export default function ReportsPage() {
     doc.text(`Generated on ${date}`, 14, 20);
 
     if (report.includes("Stock-In") || report.includes("Stock-Out")) {
+      const isIn = report.includes("Stock-In");
       const rows = state.stockTransactions
-        .filter((t) => (report.includes("Stock-In") ? t.type === "in" : t.type === "out"))
-        .map((t) => [t.type.toUpperCase(), String(t.quantity), t.date, t.reference || "—"]);
+        .filter((t) => (isIn ? t.type === "in" : t.type === "out"))
+        .map((t) => {
+          const name = supplyNameFor(t, schoolSupplies);
+          const unit = supplyUnitFor(t, schoolSupplies);
+          const qty = unit ? `${t.quantity} ${unit}` : String(t.quantity);
+          if (isIn) {
+            return [name, qty, t.reference || t.purpose || "—", formatReportDate(t.date), t.receivedBy || "—"];
+          }
+          return [
+            name,
+            qty,
+            t.recipient || t.receivedBy || "—",
+            t.purpose || t.reference || "—",
+            formatReportDate(t.date),
+            t.position || "—",
+          ];
+        });
       autoTable(doc, {
-        head: [["Type", "Quantity", "Date", "Reference"]],
+        head: isIn
+          ? [["Item / Supply", "Quantity", "Reference", "Date", "Received by"]]
+          : [["Item / Supply", "Quantity", "Recipient", "Purpose", "Date", "Position"]],
         body: rows,
         startY: 24,
       });
@@ -172,9 +225,20 @@ export default function ReportsPage() {
           {state.stockTransactions
             .filter((t) => (report.includes("Stock-In") ? t.type === "in" : t.type === "out"))
             .map((t) => (
-              <p key={t.id} className="surface p-3 text-sm">
-                {t.type.toUpperCase()} · {t.quantity} · {t.date}
-              </p>
+              <div key={t.id} className="surface p-3 text-sm">
+                <p>
+                  {report.includes("Stock-In")
+                    ? stockInLine(t, schoolSupplies)
+                    : stockOutLine(t, schoolSupplies)}
+                </p>
+                {(t.receivedBy && report.includes("Stock-In")) || t.position ? (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    {[t.receivedBy ? `Received by: ${t.receivedBy}` : null, t.position ? `Position: ${t.position}` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
             ))}
         </div>
       ) : report === "Property Transfer History" ? (

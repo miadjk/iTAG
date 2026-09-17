@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Download, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
 import { type PropertyInput, useApp, CLASSIFICATIONS } from "@/lib/app-context";
@@ -95,7 +96,7 @@ export default function PropertyDetailPage() {
 
           {can("assign") ? (
             <AssignForm
-              propertyId={property.id}
+              property={property}
               users={schoolUsers}
               defaults={{
                 accountablePerson: property.currentAccountablePerson,
@@ -109,7 +110,7 @@ export default function PropertyDetailPage() {
           {can("transfer") ? (
             <section className="surface p-4 sm:p-5">
               <h2 className="font-display break-words text-xl sm:text-2xl">Transfer property</h2>
-              <TransferForm propertyId={property.id} onSave={transferProperty} />
+              <TransferForm property={property} onSave={transferProperty} />
             </section>
           ) : null}
 
@@ -286,17 +287,19 @@ function EditForm({
 }
 
 function AssignForm({
-  propertyId,
+  property,
   users,
   defaults,
   onSave,
 }: {
-  propertyId: string;
+  property: PropertyRecord;
   users: { id: string; firstName: string; lastName: string; role: string }[];
   defaults: { accountablePerson: string; officeDepartment: string; location: string };
   onSave: ReturnType<typeof useApp>["assignProperty"];
 }) {
   const custodians = users.filter((u) => u.role === "property_custodian");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     assignedUserId: "",
     accountablePerson: defaults.accountablePerson,
@@ -306,16 +309,33 @@ function AssignForm({
     deadline: "",
     status: "active" as const,
   });
+  const selectedUser = custodians.find((u) => u.id === form.assignedUserId);
+  const assignedLabel = selectedUser
+    ? `${selectedUser.firstName} ${selectedUser.lastName}`
+    : form.accountablePerson || "—";
+
+  function requestSave(e: React.FormEvent) {
+    e.preventDefault();
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave({ propertyId: property.id, ...form });
+      setConfirmOpen(false);
+    } catch {
+      setConfirmOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section className="surface p-4 sm:p-5">
       <h2 className="font-display break-words text-xl sm:text-2xl">Assign property</h2>
-      <form
-        className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          await onSave({ propertyId, ...form });
-        }}
-      >
+      <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={requestSave}>
         <Field label="Assign to user">
           <Select value={form.assignedUserId} onChange={(e) => setForm({ ...form, assignedUserId: e.target.value })}>
             <option value="">Select user (optional)</option>
@@ -343,17 +363,36 @@ function AssignForm({
         </Field>
         <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
       </form>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm assignment"
+        message="Are you sure you want to save this assignment?"
+        details={
+          <>
+            <p>Property: {property.description || "—"}</p>
+            <p>Assigned user: {assignedLabel}</p>
+            <p>Location: {form.location || "—"}</p>
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmOpen(false)}
+        onConfirm={confirmSave}
+      />
     </section>
   );
 }
 
 function TransferForm({
-  propertyId,
+  property,
   onSave,
 }: {
-  propertyId: string;
+  property: PropertyRecord;
   onSave: ReturnType<typeof useApp>["transferProperty"];
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     newAccountablePerson: "",
     newOffice: "",
@@ -361,32 +400,67 @@ function TransferForm({
     date: new Date().toISOString().slice(0, 10),
     reason: "",
   });
+
+  function requestSave(e: React.FormEvent) {
+    e.preventDefault();
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave({ propertyId: property.id, ...form });
+      setConfirmOpen(false);
+    } catch {
+      setConfirmOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <form
-      className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          await onSave({ propertyId, ...form });
-        }}
-    >
-      <Field label="New accountable person">
-        <Input value={form.newAccountablePerson} onChange={(e) => setForm({ ...form, newAccountablePerson: e.target.value })} />
-      </Field>
-      <Field label="New office">
-        <Input value={form.newOffice} onChange={(e) => setForm({ ...form, newOffice: e.target.value })} />
-      </Field>
-      <Field label="New location">
-        <Input value={form.newLocation} onChange={(e) => setForm({ ...form, newLocation: e.target.value })} />
-      </Field>
-      <Field label="Date">
-        <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-      </Field>
-      <div className="md:col-span-2">
-        <Field label="Reason">
-          <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+    <>
+      <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={requestSave}>
+        <Field label="New accountable person">
+          <Input value={form.newAccountablePerson} onChange={(e) => setForm({ ...form, newAccountablePerson: e.target.value })} />
         </Field>
-      </div>
-      <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Confirm transfer</Button>
-    </form>
+        <Field label="New office">
+          <Input value={form.newOffice} onChange={(e) => setForm({ ...form, newOffice: e.target.value })} />
+        </Field>
+        <Field label="New location">
+          <Input value={form.newLocation} onChange={(e) => setForm({ ...form, newLocation: e.target.value })} />
+        </Field>
+        <Field label="Date">
+          <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+        </Field>
+        <div className="md:col-span-2">
+          <Field label="Reason">
+            <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+          </Field>
+        </div>
+        <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Confirm transfer</Button>
+      </form>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm transfer"
+        message="Are you sure you want to transfer this property?"
+        details={
+          <>
+            <p>Property: {property.description || "—"}</p>
+            <p>Previous accountable person: {property.currentAccountablePerson || "—"}</p>
+            <p>Previous location: {property.location || "—"}</p>
+            <p>New accountable person: {form.newAccountablePerson || "—"}</p>
+            <p>New location: {form.newLocation || "—"}</p>
+            {form.reason ? <p>Reason: {form.reason}</p> : null}
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmOpen(false)}
+        onConfirm={confirmSave}
+      />
+    </>
   );
 }

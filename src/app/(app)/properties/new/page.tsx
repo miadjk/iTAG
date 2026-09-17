@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select } from "@/components/ui/field";
 import { CLASSIFICATIONS, useApp, type PropertyInput } from "@/lib/app-context";
 import { getSchoolName } from "@/lib/locations";
@@ -59,6 +60,7 @@ export default function NewPropertyPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const schoolName = getSchoolName(user?.schoolId) || user?.schoolName || "";
   const [header, setHeader] = useState({
     classification: "low_value" as PropertyClassification,
@@ -137,7 +139,7 @@ export default function NewPropertyPage() {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  function requestSave(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!header.entityName.trim()) next.entityName = "This field is required.";
@@ -175,6 +177,12 @@ export default function NewPropertyPage() {
       setError("Complete your school profile before encoding properties.");
       return;
     }
+    setError("");
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (loading) return;
     setLoading(true);
     try {
       const typeFields = normalizeTypeFields(header.classification, header.type, header.code);
@@ -212,9 +220,11 @@ export default function NewPropertyPage() {
         warranty: "",
       }));
       const created = await encodeProperties(payload);
+      setConfirmOpen(false);
       router.push(`/properties/group/${encodeURIComponent(header.icsNumber.trim())}?created=${created.length}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save property.");
+      setConfirmOpen(false);
       setLoading(false);
     }
   }
@@ -226,7 +236,7 @@ export default function NewPropertyPage() {
         title="Add property"
         description="Items that share an ICSNO. stay in one group. Each item still gets its own QR code and can be exported together as Excel."
       />
-      <form onSubmit={onSubmit} noValidate className="space-y-6 sm:space-y-8">
+      <form onSubmit={requestSave} noValidate className="space-y-6 sm:space-y-8">
         <section className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
           <Field label="Classification">
             <Select
@@ -393,10 +403,33 @@ export default function NewPropertyPage() {
           </Button>
         </div>
         {error ? <p className="break-words text-sm text-red-700">{error}</p> : null}
-        <Button type="submit" loading={loading} className="w-full sm:w-auto">
+        <Button type="submit" className="w-full sm:w-auto">
           Save {items.length > 1 ? "properties" : "property"}
         </Button>
       </form>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm property"
+        message={items.length > 1 ? "Are you sure you want to save these properties?" : "Are you sure you want to save this property?"}
+        details={
+          <>
+            <p>ICSNO.: {header.icsNumber || "—"}</p>
+            <p>Entity: {header.entityName || "—"}</p>
+            <p>Items: {items.length}</p>
+            {items.slice(0, 3).map((item, index) => (
+              <p key={index}>
+                {index + 1}. {item.description || item.inventoryItemNumber || "Untitled item"}
+              </p>
+            ))}
+            {items.length > 3 ? <p>…and {items.length - 3} more</p> : null}
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={loading}
+        onCancel={() => !loading && setConfirmOpen(false)}
+        onConfirm={confirmSave}
+      />
     </div>
   );
 }
