@@ -41,7 +41,7 @@ function asMoney(value: unknown) {
 function displayDate(value: unknown) {
   const raw = asText(value);
   if (!raw) return "";
-  const date = new Date(raw);
+  const date = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
   if (Number.isNaN(date.getTime())) return raw;
   return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(date);
 }
@@ -81,7 +81,16 @@ export function fillAvrWorksheet(sheet: ExcelJS.Worksheet, header: AvrHeader, it
   writeCell(sheet, "A38", receivedFromPosition || null);
   writeCell(sheet, "E37", receivedByName || null);
   writeCell(sheet, "E38", receivedByPosition || null);
-  writeCell(sheet, "A41", acquired || null);
+
+  // Received from / Received by date areas (merged A39:D39 + A40:D40 and E39:H39 + E40:H40).
+  // Replace old position/office template text with the actual Date Acquired.
+  // Keep the existing "Date" labels in A42 / E42; clear the old static date in A41 / E41.
+  writeCell(sheet, "A39", acquired || null);
+  writeCell(sheet, "A40", null);
+  writeCell(sheet, "E39", acquired || null);
+  writeCell(sheet, "E40", null);
+  writeCell(sheet, "A41", null);
+  writeCell(sheet, "E41", null);
 
   clearInventoryRows(sheet);
 
