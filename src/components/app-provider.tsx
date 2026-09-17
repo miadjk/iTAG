@@ -9,7 +9,6 @@ import {
 } from "@/lib/app-context";
 import { emptyState, loadSchoolState, requireSchool } from "@/lib/data";
 import { mapProperty, mapSupply, propertyInsert } from "@/lib/mappers";
-import { getSchoolName } from "@/lib/locations";
 import { normalizeTypeFields, validateTypeFields } from "@/lib/property-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase";

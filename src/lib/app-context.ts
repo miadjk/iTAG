@@ -3,7 +3,6 @@ import type {
   AppNotification,
   AppState,
   ConsumableSupply,
-  InventoryVerification,
   Profile,
   PropertyClassification,
   PropertyCondition,
