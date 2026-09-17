@@ -11,7 +11,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { DistrictSchoolFields, getSchoolName } from "@/components/location-fields";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useApp } from "@/lib/app-context";
-import { displayName, formatDate } from "@/lib/utils";
+import { displayName, formatManilaDateTime } from "@/lib/utils";
 
 export default function AssignmentsPage() {
   const { state, schoolProperties, schoolUsers, user, can, assignProperty } = useApp();
@@ -32,8 +32,6 @@ export default function AssignmentsPage() {
     officeDepartment: "",
     districtId: "",
     schoolId: "",
-    dateAssigned: new Date().toISOString().slice(0, 10),
-    deadline: "",
     status: "pending" as const,
   });
 
@@ -68,8 +66,6 @@ export default function AssignmentsPage() {
           : form.accountablePerson,
         officeDepartment: form.officeDepartment,
         location: schoolLocation,
-        dateAssigned: form.dateAssigned,
-        deadline: form.deadline,
         status: form.status,
       });
       setFormError("");
@@ -147,14 +143,9 @@ export default function AssignmentsPage() {
             schoolId={form.schoolId}
             districtLabelText="District / Direction"
             schoolLabelText="School / Location"
+            luponOnly
             onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
           />
-          <Field label="Date assigned">
-            <Input type="date" value={form.dateAssigned} onChange={(e) => setForm({ ...form, dateAssigned: e.target.value })} />
-          </Field>
-          <Field label="Deadline">
-            <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-          </Field>
           {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
           <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
         </form>
@@ -181,8 +172,7 @@ export default function AssignmentsPage() {
                   <StatusBadge label={a.status ?? "active"} tone="accent" />
                 </div>
                 <p className="mt-3 text-xs text-[var(--text-muted)]">
-                  Assigned {formatDate(a.dateAssigned)}
-                  {a.deadline ? ` · Deadline ${a.deadline}` : ""}
+                  Assigned {formatManilaDateTime(a.createdAt || a.dateAssigned)}
                 </p>
               </article>
             );
@@ -201,7 +191,7 @@ export default function AssignmentsPage() {
             <p>Accountable person: {form.accountablePerson || "—"}</p>
             <p>Office / department: {form.officeDepartment || "—"}</p>
             <p>School / location: {schoolLocation || "—"}</p>
-            {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
+            <p>Timestamp: recorded automatically on save (Philippine time)</p>
           </>
         }
         confirmLabel="Confirm Assignment"

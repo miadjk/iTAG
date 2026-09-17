@@ -62,8 +62,6 @@ export type AppContextValue = {
     assignedUserId?: string;
     officeDepartment: string;
     location: string;
-    dateAssigned: string;
-    deadline?: string;
     status?: "pending" | "active" | "completed";
   }) => Promise<void>;
   transferProperty: (input: {
@@ -71,7 +69,6 @@ export type AppContextValue = {
     newAccountablePerson: string;
     newOffice: string;
     newLocation: string;
-    date: string;
     reason: string;
   }) => Promise<void>;
   verifyProperty: (input: {

@@ -25,6 +25,8 @@ export function DistrictSchoolFields({
   onChange,
   districtLabelText = "District / Direction",
   schoolLabelText = "School / Location",
+  /** When true, only Lupon East/West districts and schools are listed (no Banaybanay). */
+  luponOnly = false,
   errors,
 }: {
   districtId: string;
@@ -32,8 +34,12 @@ export function DistrictSchoolFields({
   onChange: (next: { districtId: string; schoolId: string }) => void;
   districtLabelText?: string;
   schoolLabelText?: string;
+  luponOnly?: boolean;
   errors?: { districtId?: string; schoolId?: string };
 }) {
+  const districtOptions = luponOnly
+    ? districts.filter((d) => d.municipalityId === "lupon")
+    : districts;
   const schoolOptions = schools.filter((s) => s.districtId === districtId);
   const schoolValid = !schoolId || schoolOptions.some((s) => s.id === schoolId);
 
@@ -45,7 +51,7 @@ export function DistrictSchoolFields({
           onChange={(e) => onChange({ districtId: e.target.value, schoolId: "" })}
         >
           <option value="">Select district</option>
-          {districts.map((d) => (
+          {districtOptions.map((d) => (
             <option key={d.id} value={d.id}>
               {districtLabel(d.id)}
             </option>

@@ -380,8 +380,6 @@ function AssignForm({
     officeDepartment: defaults.officeDepartment,
     districtId: "",
     schoolId: "",
-    dateAssigned: new Date().toISOString().slice(0, 10),
-    deadline: "",
     status: "active" as const,
   });
   const selectedUser = registeredUsers.find((u) => u.id === form.assignedUserId);
@@ -414,8 +412,6 @@ function AssignForm({
         accountablePerson: assignedLabel,
         officeDepartment: form.officeDepartment,
         location: schoolLocation,
-        dateAssigned: form.dateAssigned,
-        deadline: form.deadline,
         status: form.status,
       });
       setConfirmOpen(false);
@@ -468,14 +464,9 @@ function AssignForm({
           schoolId={form.schoolId}
           districtLabelText="District / Direction"
           schoolLabelText="School / Location"
+          luponOnly
           onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
         />
-        <Field label="Date assigned">
-          <Input type="date" value={form.dateAssigned} onChange={(e) => setForm({ ...form, dateAssigned: e.target.value })} />
-        </Field>
-        <Field label="Deadline">
-          <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-        </Field>
         {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
         <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save assignment</Button>
       </form>
@@ -491,8 +482,7 @@ function AssignForm({
             <p>Accountable person: {form.accountablePerson || assignedLabel}</p>
             <p>Office / department: {form.officeDepartment || "—"}</p>
             <p>School / location: {schoolLocation || "—"}</p>
-            <p>Date assigned: {form.dateAssigned || "—"}</p>
-            {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
+            <p>Timestamp: recorded automatically on save (Philippine time)</p>
           </>
         }
         confirmLabel="Confirm Assignment"
@@ -519,7 +509,6 @@ function TransferForm({
     newOffice: "",
     districtId: "",
     schoolId: "",
-    date: new Date().toISOString().slice(0, 10),
     reason: "",
   });
   const newSchoolLocation = getSchoolName(form.schoolId);
@@ -551,7 +540,6 @@ function TransferForm({
         newAccountablePerson: form.newAccountablePerson,
         newOffice: form.newOffice,
         newLocation: newSchoolLocation,
-        date: form.date,
         reason: form.reason,
       });
       setConfirmOpen(false);
@@ -581,11 +569,9 @@ function TransferForm({
           schoolId={form.schoolId}
           districtLabelText="New district / direction"
           schoolLabelText="New school / location"
+          luponOnly
           onChange={({ districtId, schoolId }) => setForm({ ...form, districtId, schoolId })}
         />
-        <Field label="Transfer date">
-          <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-        </Field>
         <div className="md:col-span-2">
           <Field label="Reason" required>
             <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required />
@@ -608,7 +594,7 @@ function TransferForm({
             <p>New office: {form.newOffice || "—"}</p>
             <p>Current location: {property.location || "—"}</p>
             <p>New school / location: {newSchoolLocation || "—"}</p>
-            <p>Transfer date: {form.date || "—"}</p>
+            <p>Timestamp: recorded automatically on save (Philippine time)</p>
             {form.reason ? <p>Reason: {form.reason}</p> : null}
           </>
         }

@@ -5,7 +5,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useApp } from "@/lib/app-context";
-import { formatDate } from "@/lib/utils";
+import { formatManilaDateTime } from "@/lib/utils";
 
 export default function TransfersPage() {
   const { state, schoolProperties } = useApp();
@@ -34,7 +34,7 @@ export default function TransfersPage() {
                   {t.previousAccountablePerson} → {t.newAccountablePerson}
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  {t.previousLocation} → {t.newLocation} · {formatDate(t.date)} · {t.reason}
+                  {t.previousLocation} → {t.newLocation} · {formatManilaDateTime(t.createdAt || t.date)} · {t.reason}
                 </p>
               </article>
             );

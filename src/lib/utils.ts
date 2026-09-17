@@ -20,12 +20,34 @@ export function nowIso() {
 
 export function formatDate(value?: string | null) {
   if (!value) return "—";
-  const date = new Date(value);
+  const date = new Date(value.includes("T") || value.includes(" ") ? value : `${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+/** Full date+time in Philippine local time for assignment/transfer transactions. */
+export function formatManilaDateTime(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
+/** Calendar date (YYYY-MM-DD) in Asia/Manila for DB `date` columns. */
+export function manilaDateOnly(now = new Date()) {
+  return now.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
 }
 
 export function formatLongDate(value?: string | null) {

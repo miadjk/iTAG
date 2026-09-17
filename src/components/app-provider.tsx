@@ -14,7 +14,7 @@ import { normalizeTypeFields, validateTypeFields } from "@/lib/property-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { throwIfError } from "@/lib/site";
-import { deriveSupplyStatus, isNineDigitPassword, normalizeKey, uid } from "@/lib/utils";
+import { deriveSupplyStatus, isNineDigitPassword, manilaDateOnly, normalizeKey, uid } from "@/lib/utils";
 import type { AppState, ConsumableSupply, Profile, PropertyRecord } from "@/types";
 import { ToastHost, type ToastItem } from "@/components/ui/toast";
 
@@ -569,8 +569,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     assignedUserId?: string;
     officeDepartment: string;
     location: string;
-    dateAssigned: string;
-    deadline?: string;
     status?: "pending" | "active" | "completed";
   }) => {
     const client = await requireClient();
@@ -580,14 +578,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const assignedUser = input.assignedUserId ? schoolUsers.find((p) => p.id === input.assignedUserId) : undefined;
     const accountablePerson = assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : input.accountablePerson.trim();
     if (!accountablePerson) throw new Error("Accountable person is required.");
+    const assignedAt = manilaDateOnly();
     const inserted = await client.from("property_assignments").insert({
       property_id: input.propertyId,
       accountable_person: accountablePerson,
       assigned_user_id: input.assignedUserId || null,
       office_department: input.officeDepartment,
       location: input.location,
-      date_assigned: input.dateAssigned || null,
-      deadline: input.deadline || null,
+      date_assigned: assignedAt,
+      deadline: null,
       status: input.status ?? "active",
       assigned_by: user.id,
     });
@@ -649,7 +648,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     newAccountablePerson: string;
     newOffice: string;
     newLocation: string;
-    date: string;
     reason: string;
   }) => {
     const client = await requireClient();
@@ -659,6 +657,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!input.newAccountablePerson.trim() || !input.reason.trim()) {
       throw new Error("New accountable person and reason are required.");
     }
+    const transferredAt = manilaDateOnly();
     const inserted = await client.from("property_transfers").insert({
       property_id: input.propertyId,
       previous_accountable_person: current.currentAccountablePerson,
@@ -667,7 +666,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       new_office: input.newOffice,
       previous_location: current.location,
       new_location: input.newLocation,
-      date: input.date || null,
+      date: transferredAt,
       reason: input.reason.trim(),
       performed_by: user.id,
     });
