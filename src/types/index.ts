@@ -172,6 +172,9 @@ export interface ConsumableSupply {
   location: string;
   status: SupplyStatus;
   remarks: string;
+  classification: PropertyClassification;
+  type: string;
+  code: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -182,10 +185,14 @@ export interface StockTransaction {
   supplyId: string;
   type: "in" | "out";
   quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
   date: string;
   reference: string;
   recipient?: string;
   purpose?: string;
+  receivedBy: string;
+  position: string;
   performedBy: string;
   createdAt: string;
 }

@@ -8,16 +8,15 @@ import {
   type RegisterInput,
 } from "@/lib/app-context";
 import { emptyState, loadSchoolState, requireSchool } from "@/lib/data";
-import { mapProperty, propertyInsert } from "@/lib/mappers";
+import { mapProperty, mapSupply, propertyInsert } from "@/lib/mappers";
 import { getSchoolName } from "@/lib/locations";
 import { normalizeTypeFields, validateTypeFields } from "@/lib/property-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { throwIfError } from "@/lib/site";
-import { deriveSupplyStatus, isNineDigitPassword } from "@/lib/utils";
+import { deriveSupplyStatus, isNineDigitPassword, normalizeKey, uid } from "@/lib/utils";
 import type { AppState, ConsumableSupply, Profile, PropertyRecord } from "@/types";
 import { ToastHost, type ToastItem } from "@/components/ui/toast";
-import { uid } from "@/lib/utils";
 
 function toastId() {
   return uid("toast");
@@ -618,100 +617,223 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const client = await requireClient();
     if (!user?.schoolId || user.role !== "property_custodian") throw new Error("Not authorized.");
-    const status = deriveSupplyStatus(input.currentQuantity, input.minimumStockLevel);
+    const name = normalizeKey(input.name);
+    const unit = normalizeKey(input.unit);
+    const classification = input.classification || "consumable";
+    const type = normalizeKey(input.type || "");
+    const code = normalizeKey(input.code || "");
+    if (!name) throw new Error("Supply name is required.");
+
+    let targetId = input.id;
+    if (!targetId) {
+      const match = schoolSupplies.find(
+        (s) =>
+          normalizeKey(s.name).toLowerCase() === name.toLowerCase() &&
+          normalizeKey(s.unit).toLowerCase() === unit.toLowerCase() &&
+          (s.classification || "consumable") === classification &&
+          normalizeKey(s.type || "").toLowerCase() === type.toLowerCase() &&
+          normalizeKey(s.code || "").toLowerCase() === code.toLowerCase(),
+      );
+      if (match) targetId = match.id;
+    }
+
+    const existing = targetId ? schoolSupplies.find((s) => s.id === targetId) : undefined;
+    const openingQty = Math.max(0, Number(input.currentQuantity) || 0);
+    // Matching existing supply: keep current quantity (use Stock-in for additions). New supply starts at 0 then records opening stock.
+    const quantityForRow = existing ? existing.currentQuantity : 0;
+    const status = deriveSupplyStatus(existing ? existing.currentQuantity : openingQty, input.minimumStockLevel);
     const row = {
       school_id: user.schoolId,
-      name: input.name,
+      name,
       description: input.description,
-      unit: input.unit,
-      current_quantity: input.currentQuantity,
+      unit,
+      current_quantity: quantityForRow,
       minimum_stock_level: input.minimumStockLevel,
       location: input.location,
       remarks: input.remarks,
-      status,
-      created_by: user.id,
+      classification,
+      type,
+      code,
+      status: existing ? deriveSupplyStatus(existing.currentQuantity, input.minimumStockLevel) : deriveSupplyStatus(0, input.minimumStockLevel),
+      created_by: existing?.createdBy || user.id,
     };
-    const res = input.id
-      ? await client.from("consumable_supplies").update(row).eq("id", input.id).select("*").single()
+
+    const res = targetId
+      ? await client.from("consumable_supplies").update(row).eq("id", targetId).select("*").single()
       : await client.from("consumable_supplies").insert(row).select("*").single();
     throwIfError(res.error, "Unable to save supply.");
-    await writeAudit(input.id ? "Supply updated" : "Supply created", "supply", res.data.id);
+    const savedId = String(res.data.id);
+
+    if (!existing && openingQty > 0) {
+      const movement = await client.rpc("apply_stock_movement", {
+        p_supply_id: savedId,
+        p_type: "in",
+        p_quantity: openingQty,
+        p_date: new Date().toISOString().slice(0, 10),
+        p_received_by: "",
+        p_position: "",
+        p_remarks: "Opening stock",
+        p_reference: "Opening stock",
+      });
+      if (movement.error) {
+        // Fallback if RPC patch is not applied yet: set quantity and write history row.
+        const fallbackStatus = deriveSupplyStatus(openingQty, input.minimumStockLevel);
+        const updated = await client
+          .from("consumable_supplies")
+          .update({ current_quantity: openingQty, status: fallbackStatus })
+          .eq("id", savedId);
+        throwIfError(updated.error, "Unable to set opening stock.");
+        const tx = await client.from("stock_transactions").insert({
+          supply_id: savedId,
+          type: "in",
+          quantity: openingQty,
+          previous_quantity: 0,
+          new_quantity: openingQty,
+          date: new Date().toISOString().slice(0, 10),
+          reference: "Opening stock",
+          purpose: "Opening stock",
+          received_by: "",
+          position: "",
+          performed_by: user.id,
+        });
+        throwIfError(tx.error, "Unable to record opening stock history.");
+      }
+    }
+
+    await writeAudit(existing || input.id ? "Supply updated" : "Supply created", "supply", savedId);
     if (status !== "available") {
       await notifySchool({
         type: "low_stock",
         title: status === "out_of_stock" ? "Supply out of stock" : "Low-stock notification",
-        body: `${input.name} is at ${input.currentQuantity} ${input.unit}.`,
+        body: `${name} is at ${existing ? existing.currentQuantity : openingQty} ${unit}.`,
         href: "/supplies",
       });
     }
     await refresh();
-    return schoolSupplies.find((s) => s.id === res.data.id) ?? ({
-      ...input,
-      id: res.data.id,
-      schoolId: user.schoolId,
-      createdBy: user.id,
+    const mapped = mapSupply(res.data);
+    return schoolSupplies.find((s) => s.id === savedId) ?? {
+      ...mapped,
+      currentQuantity: existing ? existing.currentQuantity : openingQty,
       status,
-      createdAt: res.data.created_at,
-      updatedAt: res.data.updated_at,
-    } as ConsumableSupply);
+      classification,
+      type,
+      code,
+    };
   };
 
-  const stockIn = async (supplyId: string, quantity: number, date: string, reference: string) => {
+  async function applyStockMovement(input: {
+    supplyId: string;
+    type: "in" | "out";
+    quantity: number;
+    date: string;
+    receivedBy: string;
+    position: string;
+    remarks: string;
+    reference?: string;
+  }) {
     const client = await requireClient();
     if (!user || user.role !== "property_custodian") throw new Error("Not authorized.");
-    const supply = schoolSupplies.find((s) => s.id === supplyId);
-    if (!supply) throw new Error("Supply not found.");
-    if (quantity <= 0) throw new Error("Enter a valid quantity.");
-    const currentQuantity = supply.currentQuantity + quantity;
-    const status = deriveSupplyStatus(currentQuantity, supply.minimumStockLevel);
-    const tx = await client.from("stock_transactions").insert({
-      supply_id: supplyId,
-      type: "in",
-      quantity,
-      date: date || null,
-      reference,
-      performed_by: user.id,
-    });
-    throwIfError(tx.error, "Unable to record stock-in.");
-    const updated = await client.from("consumable_supplies").update({ current_quantity: currentQuantity, status }).eq("id", supplyId);
-    throwIfError(updated.error, "Unable to update stock.");
-    await writeAudit("Stock-in", "supply", supplyId, String(supply.currentQuantity), String(currentQuantity));
-    await refresh();
-    pushToast({ title: "Stock-in recorded", body: "Current quantity increased and history was saved.", tone: "success" });
-  };
+    if (input.quantity <= 0) throw new Error("Enter a valid quantity.");
 
-  const stockOut = async (supplyId: string, quantity: number, date: string, recipient: string, purpose: string) => {
-    const client = await requireClient();
-    if (!user || user.role !== "property_custodian") throw new Error("Not authorized.");
-    const supply = schoolSupplies.find((s) => s.id === supplyId);
-    if (!supply) throw new Error("Supply not found.");
-    if (quantity <= 0) throw new Error("Enter a valid quantity.");
-    if (quantity > supply.currentQuantity) throw new Error("Quantity exceeds current stock.");
-    const currentQuantity = supply.currentQuantity - quantity;
-    const status = deriveSupplyStatus(currentQuantity, supply.minimumStockLevel);
+    const movement = await client.rpc("apply_stock_movement", {
+      p_supply_id: input.supplyId,
+      p_type: input.type,
+      p_quantity: input.quantity,
+      p_date: input.date || null,
+      p_received_by: input.receivedBy.trim(),
+      p_position: input.position.trim(),
+      p_remarks: input.remarks.trim(),
+      p_reference: (input.reference || input.remarks || "").trim(),
+    });
+
+    if (!movement.error) {
+      const row = Array.isArray(movement.data) ? movement.data[0] : movement.data;
+      const prev = Number(row?.previous_quantity ?? 0);
+      const next = Number(row?.new_quantity ?? 0);
+      const supply = schoolSupplies.find((s) => s.id === input.supplyId);
+      await writeAudit(
+        input.type === "in" ? "Stock-in" : "Stock-out",
+        "supply",
+        input.supplyId,
+        String(prev),
+        String(next),
+      );
+      if (input.type === "out" && row?.status && row.status !== "available" && supply) {
+        await notifySchool({
+          type: "low_stock",
+          title: "Low-stock notification",
+          body: `${supply.name} reached ${next} ${supply.unit}.`,
+          href: "/supplies",
+        });
+      }
+      await refresh();
+      return;
+    }
+
+    // Fallback path with live DB quantity check (server-side read) if RPC is unavailable.
+    const live = await client.from("consumable_supplies").select("*").eq("id", input.supplyId).single();
+    throwIfError(live.error, "Supply not found.");
+    const supply = mapSupply(live.data);
+    const previous = supply.currentQuantity;
+    if (input.type === "out" && input.quantity > previous) {
+      throw new Error(`Insufficient stock. Only ${previous} units are currently available.`);
+    }
+    const next = input.type === "in" ? previous + input.quantity : previous - input.quantity;
+    const status = deriveSupplyStatus(next, supply.minimumStockLevel);
     const tx = await client.from("stock_transactions").insert({
-      supply_id: supplyId,
-      type: "out",
-      quantity,
-      date: date || null,
-      reference: purpose,
-      recipient,
-      purpose,
+      supply_id: input.supplyId,
+      type: input.type,
+      quantity: input.quantity,
+      previous_quantity: previous,
+      new_quantity: next,
+      date: input.date || null,
+      reference: (input.reference || input.remarks || "").trim(),
+      recipient: input.receivedBy.trim() || null,
+      purpose: input.remarks.trim() || null,
+      received_by: input.receivedBy.trim(),
+      position: input.position.trim(),
       performed_by: user.id,
     });
-    throwIfError(tx.error, "Unable to record stock-out.");
-    const updated = await client.from("consumable_supplies").update({ current_quantity: currentQuantity, status }).eq("id", supplyId);
+    throwIfError(tx.error, input.type === "in" ? "Unable to record stock-in." : "Unable to record stock-out.");
+    const updated = await client
+      .from("consumable_supplies")
+      .update({ current_quantity: next, status })
+      .eq("id", input.supplyId);
     throwIfError(updated.error, "Unable to update stock.");
-    await writeAudit("Stock-out", "supply", supplyId, String(supply.currentQuantity), String(currentQuantity));
-    if (status !== "available") {
+    await writeAudit(input.type === "in" ? "Stock-in" : "Stock-out", "supply", input.supplyId, String(previous), String(next));
+    if (input.type === "out" && status !== "available") {
       await notifySchool({
         type: "low_stock",
         title: "Low-stock notification",
-        body: `${supply.name} reached ${currentQuantity} ${supply.unit}.`,
+        body: `${supply.name} reached ${next} ${supply.unit}.`,
         href: "/supplies",
       });
     }
     await refresh();
+  }
+
+  const stockIn = async (input: {
+    supplyId: string;
+    quantity: number;
+    date: string;
+    receivedBy: string;
+    position: string;
+    remarks: string;
+    reference?: string;
+  }) => {
+    await applyStockMovement({ ...input, type: "in" });
+    pushToast({ title: "Stock-in recorded", body: "Current quantity increased and history was saved.", tone: "success" });
+  };
+
+  const stockOut = async (input: {
+    supplyId: string;
+    quantity: number;
+    date: string;
+    receivedBy: string;
+    position: string;
+    remarks: string;
+  }) => {
+    await applyStockMovement({ ...input, type: "out" });
     pushToast({ title: "Stock-out recorded", body: "Remaining stock was updated.", tone: "success" });
   };
 

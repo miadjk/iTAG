@@ -28,7 +28,7 @@ export function conditionBadge(condition: PropertyCondition) {
 
 export function supplyStatusBadge(status: SupplyStatus) {
   const map = {
-    available: { label: "Available", tone: "ok" as const, icon: Package },
+    available: { label: "Normal", tone: "ok" as const, icon: Package },
     low_stock: { label: "Low Stock", tone: "warn" as const, icon: AlertCircle },
     out_of_stock: { label: "Out of Stock", tone: "danger" as const, icon: AlertCircle },
   };
