@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { propertyQrPayload } from "@/lib/qr";
+import { propertyOnlineResultUrl, propertyQrPayload } from "@/lib/qr";
 import type { PropertyClassification, PropertyStatus } from "@/types";
 
 export function QrCard({
@@ -31,6 +31,7 @@ export function QrCard({
 }) {
   const [src, setSrc] = useState("");
   const payload = propertyQrPayload(property);
+  const onlineUrl = propertyOnlineResultUrl(property.qrCode);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,10 +71,20 @@ export function QrCard({
           className="mx-auto mt-4 h-auto w-full max-w-48 rounded-lg border border-[var(--border)] bg-white p-2"
         />
       ) : null}
-      <p className="mt-3 break-all text-[11px] text-[var(--text-muted)]">{payload}</p>
+      <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-[11px] leading-relaxed text-[var(--text-muted)]">
+        {payload}
+      </pre>
       <p className="mt-2 text-[11px] text-[var(--text-muted)]">
         Self-contained offline QR. Scan with any phone camera — no internet required.
       </p>
+      {onlineUrl ? (
+        <p className="mt-2 break-all text-[11px] text-[var(--text-muted)]">
+          Online result (separate from QR):{" "}
+          <a href={onlineUrl} className="text-[#3F3FA3] underline" target="_blank" rel="noreferrer">
+            {onlineUrl}
+          </a>
+        </p>
+      ) : null}
       <Button type="button" className="mt-4 w-full" onClick={download}>
         Save QR image
       </Button>

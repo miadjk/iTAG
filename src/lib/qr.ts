@@ -28,26 +28,6 @@ export type QrPropertyView = {
   updatedAt?: string;
 };
 
-/** Compact self-contained QR payload — readable offline without network/API. */
-export type PropertyQrPayload = {
-  type: "ITAG-PROP";
-  propertyId: string;
-  qrVersion: number;
-  propertyName: string;
-  category: string;
-  itemNo: string;
-  icsNo: string;
-  value: number;
-  fundingSource: string;
-  school: string;
-  accountablePerson: string;
-  status: string;
-  dateAcquired: string;
-  updatedAt: string;
-  /** Optional online deep-link; never required to read property data offline. */
-  url?: string;
-};
-
 export function statusLabel(status?: string) {
   if (!status) return "";
   return status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
@@ -98,9 +78,14 @@ export function encodedQrFieldsChanged(
   return qrEncodedSnapshot(before) !== qrEncodedSnapshot(after);
 }
 
+function line(label: string, value: string) {
+  const v = value.trim();
+  return v ? `${label}: ${v}` : "";
+}
+
 /**
- * Build a self-contained QR string from FINAL SAVED property data.
- * Phone cameras decode this JSON offline without opening any website.
+ * Self-contained human-readable QR text for offline phone scanners.
+ * No nested URL — scanners show this text directly without needing internet.
  */
 export function propertyQrPayload(property: {
   permanentId?: string;
@@ -117,31 +102,42 @@ export function propertyQrPayload(property: {
   custodianLastUser?: string;
   status?: string;
   dateAcquired?: string;
-  qrCode?: string;
   updatedAt?: string;
-  includeOnlineUrl?: boolean;
 }): string {
   const propertyId = (property.permanentId || "").trim() || property.inventoryItemNumber || "UNKNOWN";
-  const payload: PropertyQrPayload = {
-    type: "ITAG-PROP",
-    propertyId,
-    qrVersion: property.qrVersion && property.qrVersion > 0 ? property.qrVersion : 1,
-    propertyName: property.description || "",
-    category: property.classification ? classificationLabel(property.classification as PropertyClassification) : "",
-    itemNo: property.inventoryItemNumber || "",
-    icsNo: property.icsNumber || "",
-    value: Number(property.totalCost ?? property.unitCost ?? 0) || 0,
-    fundingSource: property.fundSource || "",
-    school: property.location || "",
-    accountablePerson: property.currentAccountablePerson || property.custodianLastUser || "",
-    status: statusLabel(property.status),
-    dateAcquired: property.dateAcquired || "",
-    updatedAt: (property.updatedAt || "").slice(0, 10),
-  };
-  if (property.includeOnlineUrl !== false && property.qrCode) {
-    payload.url = propertyPublicUrl(property.qrCode);
-  }
-  return JSON.stringify(payload);
+  const version = property.qrVersion && property.qrVersion > 0 ? property.qrVersion : 1;
+  const value = Number(property.totalCost ?? property.unitCost ?? 0) || 0;
+  const acquired = formatLongDate(property.dateAcquired) || property.dateAcquired || "";
+  const updated = formatLongDate(property.updatedAt) || (property.updatedAt || "").slice(0, 10);
+
+  const lines = [
+    "ITAG-PROP",
+    line("PROPERTY ID", propertyId),
+    line("QR VERSION", String(version)),
+    "",
+    line("PROPERTY NAME", property.description || ""),
+    line(
+      "CATEGORY",
+      property.classification ? classificationLabel(property.classification as PropertyClassification) : "",
+    ),
+    line("ITEM NO.", property.inventoryItemNumber || ""),
+    line("ICS NO.", property.icsNumber || ""),
+    line("VALUE", formatMoney(value)),
+    line("FUNDING SOURCE", property.fundSource || ""),
+    line("SCHOOL", property.location || ""),
+    line("ACCOUNTABLE PERSON", property.currentAccountablePerson || property.custodianLastUser || ""),
+    line("STATUS", statusLabel(property.status)),
+    line("DATE ACQUIRED", acquired),
+    line("LAST UPDATED", updated),
+  ];
+
+  return lines.filter((l, i) => l !== "" || lines[i - 1] !== "").join("\n").trim();
+}
+
+/** Online deep-link for in-app use only — never encoded inside the offline QR text. */
+export function propertyOnlineResultUrl(qrToken?: string) {
+  if (!qrToken?.trim()) return "";
+  return propertyPublicUrl(qrToken.trim());
 }
 
 export function propertyScanLines(property: QrPropertyView) {
