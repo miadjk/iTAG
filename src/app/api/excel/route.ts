@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import path from "path";
-import { fillAvrWorksheet } from "@/lib/fill-avr-template";
+import {
+  fillAvrWorksheet,
+  renameWorksheetFromDescription,
+  worksheetNameFromDescription,
+} from "@/lib/fill-avr-template";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { mapProperty } from "@/lib/mappers";
 import { normalizeKey } from "@/lib/utils";
@@ -48,7 +52,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No properties found for that ICSNO." }, { status: 404 });
   }
 
-  const header = items[0];
+  const selected =
+    (body.propertyId ? items.find((p) => p.id === body.propertyId) : undefined) ?? items[0];
+  const header = selected;
+  // Worksheet tab name must match the saved Description used on the form (not the template default).
+  const tabDescription = selected.description;
   const templatePath = path.join(process.cwd(), "public", "templates", "AVR.xlsx");
   const workbook = new ExcelJS.Workbook();
   let usedTemplate = false;
@@ -60,8 +68,9 @@ export async function POST(request: Request) {
   }
 
   if (usedTemplate && workbook.worksheets[0]) {
+    const sheet = workbook.worksheets[0];
     fillAvrWorksheet(
-      workbook.worksheets[0],
+      sheet,
       {
         entityName: header.entityName,
         icsNumber: header.icsNumber,
@@ -76,8 +85,14 @@ export async function POST(request: Request) {
       },
       items,
     );
+    renameWorksheetFromDescription(sheet, tabDescription);
   } else {
-    const sheet = workbook.addWorksheet("ICSNO");
+    const sheet = workbook.addWorksheet(
+      worksheetNameFromDescription(
+        tabDescription,
+        workbook.worksheets.map((s) => s.name),
+      ),
+    );
     sheet.columns = [
       { header: "Item No.", key: "item", width: 18 },
       { header: "Description", key: "description", width: 36 },

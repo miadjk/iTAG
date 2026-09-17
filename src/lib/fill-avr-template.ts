@@ -33,6 +33,85 @@ function asText(value: unknown) {
   return String(value).trim();
 }
 
+const WORKSHEET_NAME_FALLBACK = "Inventory Custodian Slip";
+const WORKSHEET_NAME_MAX = 31;
+const TITLE_CASE_SMALL_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "but",
+  "by",
+  "for",
+  "in",
+  "nor",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "vs",
+  "via",
+]);
+
+/** Title-case words for the worksheet tab only (does not change stored Description). */
+function titleCaseWords(value: string) {
+  const words = value.split(/\s+/).filter(Boolean);
+  return words
+    .map((word, index) => {
+      const lower = word.toLowerCase();
+      if (index > 0 && index < words.length - 1 && TITLE_CASE_SMALL_WORDS.has(lower)) {
+        return lower;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/**
+ * Build a valid Excel worksheet/tab name from a property description.
+ * Removes \ / ? * [ ], trims, title-cases, caps at 31 chars, and avoids collisions.
+ */
+export function worksheetNameFromDescription(
+  description: string | undefined | null,
+  existingNames: Iterable<string> = [],
+) {
+  let base = titleCaseWords(asText(description))
+    .replace(/[\\/?*[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!base) base = WORKSHEET_NAME_FALLBACK;
+  base = base.slice(0, WORKSHEET_NAME_MAX).trim();
+  if (!base) base = WORKSHEET_NAME_FALLBACK.slice(0, WORKSHEET_NAME_MAX);
+
+  const used = new Set(
+    [...existingNames]
+      .map((n) => asText(n).toLowerCase())
+      .filter(Boolean),
+  );
+
+  let candidate = base;
+  let n = 2;
+  while (used.has(candidate.toLowerCase())) {
+    const suffix = ` (${n})`;
+    candidate = `${base.slice(0, Math.max(1, WORKSHEET_NAME_MAX - suffix.length)).trimEnd()}${suffix}`;
+    n += 1;
+  }
+  return candidate;
+}
+
+/** Rename a worksheet tab from the saved item description (sanitized for Excel). */
+export function renameWorksheetFromDescription(
+  sheet: ExcelJS.Worksheet,
+  description: string | undefined | null,
+) {
+  const workbook = sheet.workbook;
+  const others = workbook.worksheets.filter((s) => s.id !== sheet.id).map((s) => s.name);
+  sheet.name = worksheetNameFromDescription(description, others);
+  return sheet.name;
+}
+
 function asMoney(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;

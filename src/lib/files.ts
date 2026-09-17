@@ -12,11 +12,11 @@ export function itemsForIcsForm(property: PropertyRecord, all: PropertyRecord[] 
   return [selected ?? property, ...rest];
 }
 
-export async function downloadIcsExcel(icsNumber: string) {
+export async function downloadIcsExcel(icsNumber: string, propertyId?: string) {
   const res = await fetch("/api/excel", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ icsNumber }),
+    body: JSON.stringify({ icsNumber, propertyId }),
   });
   if (!res.ok) {
     const payload = await res.json().catch(() => ({ error: "Unable to download Excel." }));
@@ -33,5 +33,5 @@ export async function downloadIcsExcel(icsNumber: string) {
 
 export async function downloadPropertyExcel(property: PropertyRecord, _all: PropertyRecord[] = []) {
   void _all;
-  await downloadIcsExcel(property.icsNumber);
+  await downloadIcsExcel(property.icsNumber, property.id);
 }
