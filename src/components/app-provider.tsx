@@ -685,7 +685,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const supply = schoolSupplies.find((s) => s.id === supplyId);
     if (!supply) throw new Error("Supply not found.");
     if (quantity <= 0) throw new Error("Enter a valid quantity.");
-    if (quantity > supply.currentQuantity) throw new Error("Quantity exceeds current stock.");
+    if (quantity > supply.currentQuantity) throw new Error("Insufficient stock. Available quantity: ${supply.currentQuantity}.");
     const currentQuantity = supply.currentQuantity - quantity;
     const status = deriveSupplyStatus(currentQuantity, supply.minimumStockLevel);
     const tx = await client.from("stock_transactions").insert({

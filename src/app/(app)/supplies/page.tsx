@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Warehouse } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, Warehouse } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,6 +13,7 @@ export default function SuppliesPage() {
   const { schoolSupplies, can, upsertSupply, stockIn, stockOut, state } = useApp();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -23,6 +24,18 @@ export default function SuppliesPage() {
     remarks: "",
   });
   const [stock, setStock] = useState({ supplyId: "", type: "in" as "in" | "out", quantity: "", date: new Date().toISOString().slice(0, 10), reference: "", recipient: "", purpose: "" });
+
+  const filteredSupplies = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return schoolSupplies;
+    return schoolSupplies.filter((s) => {
+      const haystack = [s.name, s.unit, s.description, s.location, s.remarks]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [schoolSupplies, query]);
 
   return (
     <div>
@@ -104,19 +117,34 @@ export default function SuppliesPage() {
         <EmptyState icon={Warehouse} title="No supplies yet." body="Bond paper, pens, ink, toner, and other replenished items are managed here." />
       ) : (
         <div className="space-y-3">
-          {schoolSupplies.map((s) => (
-            <article key={s.id} className="surface p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {s.currentQuantity} {s.unit} · min {s.minimumStockLevel} · {s.location || "No location"}
-                  </p>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search supplies..."
+              className="pl-10"
+              aria-label="Search supplies"
+            />
+          </div>
+          {filteredSupplies.length === 0 ? (
+            <p className="surface p-4 text-sm text-[var(--text-muted)]">No supplies found.</p>
+          ) : (
+            filteredSupplies.map((s) => (
+              <article key={s.id} className="surface p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Current stock: {s.currentQuantity} {s.unit} · Minimum stock: {s.minimumStockLevel}
+                      {s.location ? ` · ${s.location}` : ""}
+                    </p>
+                  </div>
+                  {supplyStatusBadge(s.status)}
                 </div>
-                {supplyStatusBadge(s.status)}
-              </div>
-            </article>
-          ))}
+              </article>
+            ))
+          )}
         </div>
       )}
 
