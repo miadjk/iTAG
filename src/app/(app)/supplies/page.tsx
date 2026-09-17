@@ -10,7 +10,6 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { useApp } from "@/lib/app-context";
 import { classLabel, supplyStatusBadge } from "@/components/badges";
 import { codeForType, CONSUMABLE_TYPES, validateTypeFields } from "@/lib/property-types";
-import { formatLongDate } from "@/lib/utils";
 import type { PropertyClassification } from "@/types";
 
 export default function SuppliesPage() {
@@ -40,10 +39,21 @@ export default function SuppliesPage() {
     type: "in" as "in" | "out",
     quantity: "",
     date: new Date().toISOString().slice(0, 10),
-    receivedBy: "",
+    recipientName: "",
+    purpose: "",
+    reference: "",
     position: "",
-    remarks: "",
   });
+
+  function formatHistoryDate(value?: string | null) {
+    if (!value) return "—";
+    const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
 
   const filteredSupplies = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -121,6 +131,14 @@ export default function SuppliesPage() {
       setError("Enter a valid quantity.");
       return;
     }
+    if (stock.type === "out" && !stock.recipientName.trim()) {
+      setError("Recipient name is required for stock-out.");
+      return;
+    }
+    if (stock.type === "out" && !stock.purpose.trim()) {
+      setError("Purpose is required for stock-out.");
+      return;
+    }
     setConfirmKind("stock");
   }
 
@@ -157,22 +175,29 @@ export default function SuppliesPage() {
           supplyId: stock.supplyId,
           quantity: qty,
           date: stock.date,
-          receivedBy: stock.receivedBy,
+          receivedBy: "",
           position: stock.position,
-          remarks: stock.remarks,
-          reference: stock.remarks,
+          remarks: stock.reference,
+          reference: stock.reference,
         });
       } else {
         await stockOut({
           supplyId: stock.supplyId,
           quantity: qty,
           date: stock.date,
-          receivedBy: stock.receivedBy,
+          receivedBy: stock.recipientName,
           position: stock.position,
-          remarks: stock.remarks,
+          remarks: stock.purpose,
         });
       }
-      setStock((prev) => ({ ...prev, quantity: "", receivedBy: "", position: "", remarks: "" }));
+      setStock((prev) => ({
+        ...prev,
+        quantity: "",
+        recipientName: "",
+        purpose: "",
+        reference: "",
+        position: "",
+      }));
       setHistorySupplyId(stock.supplyId);
       setConfirmKind(null);
     } catch (err) {
@@ -248,26 +273,26 @@ export default function SuppliesPage() {
             ) : (
               supplyHistory.map((t) => {
                 const supply = schoolSupplies.find((s) => s.id === t.supplyId);
+                const isOut = t.type === "out";
                 return (
                   <article key={t.id} className="border border-[var(--border)] p-3 text-sm">
-                    <p className="uppercase tracking-widest text-[11px] text-[var(--text-muted)]">
-                      {supply?.name || "Supply"} · {t.type === "in" ? "Stock In" : "Stock Out"}
+                    <p className="uppercase tracking-widest">{supply?.name || "Supply"}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+                      {isOut ? "Stock-out" : "Stock-in"}
                     </p>
                     <p className="mt-1">
-                      Quantity: {t.type === "in" ? "+" : "-"}
-                      {t.quantity} {supply?.unit || ""}
+                      Quantity: {t.quantity}
+                      {supply?.unit ? ` ${supply.unit}` : ""}
                     </p>
-                    <p>
-                      Previous: {t.previousQuantity} → New: {t.newQuantity}
-                    </p>
-                    <p>Date: {formatLongDate(t.date) || t.date || "—"}</p>
-                    {t.receivedBy ? (
-                      <p>
-                        Received by: {t.receivedBy}
-                        {t.position ? ` · ${t.position}` : ""}
-                      </p>
-                    ) : null}
-                    {t.purpose || t.reference ? <p>Remarks/Purpose: {t.purpose || t.reference}</p> : null}
+                    {isOut ? (
+                      <>
+                        <p>Recipient: {t.recipient || t.receivedBy || "—"}</p>
+                        <p>Purpose: {t.purpose || "—"}</p>
+                      </>
+                    ) : (
+                      <p>Reference: {t.reference || t.purpose || "—"}</p>
+                    )}
+                    <p>Date: {formatHistoryDate(t.date)}</p>
                   </article>
                 );
               })
@@ -415,17 +440,36 @@ export default function SuppliesPage() {
           <Field label="Date">
             <Input type="date" value={stock.date} onChange={(e) => setStock({ ...stock, date: e.target.value })} />
           </Field>
-          <Field label="Received by">
-            <Input value={stock.receivedBy} onChange={(e) => setStock({ ...stock, receivedBy: e.target.value })} />
-          </Field>
-          <Field label="Position">
-            <Input value={stock.position} onChange={(e) => setStock({ ...stock, position: e.target.value })} />
-          </Field>
-          <div className="md:col-span-2">
-            <Field label={stock.type === "in" ? "Reference / remarks" : "Purpose / remarks"}>
-              <Input value={stock.remarks} onChange={(e) => setStock({ ...stock, remarks: e.target.value })} />
-            </Field>
-          </div>
+          {stock.type === "out" ? (
+            <>
+              <Field label="Recipient name" required>
+                <Input
+                  value={stock.recipientName}
+                  onChange={(e) => setStock({ ...stock, recipientName: e.target.value })}
+                  placeholder="Juan Dela Cruz"
+                  required
+                />
+              </Field>
+              <Field label="Purpose" required>
+                <Input
+                  value={stock.purpose}
+                  onChange={(e) => setStock({ ...stock, purpose: e.target.value })}
+                  placeholder="Office use"
+                  required
+                />
+              </Field>
+            </>
+          ) : (
+            <div className="md:col-span-2">
+              <Field label="Reference">
+                <Input
+                  value={stock.reference}
+                  onChange={(e) => setStock({ ...stock, reference: e.target.value })}
+                  placeholder="Delivery Receipt #001"
+                />
+              </Field>
+            </div>
+          )}
           {error ? <p className="break-words text-sm text-red-700 md:col-span-2">{error}</p> : null}
           <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">
             {stock.type === "in" ? "Save stock-in" : "Save stock-out"}
@@ -436,7 +480,7 @@ export default function SuppliesPage() {
       <ConfirmDialog
         open={confirmKind === "supply"}
         title="Confirm supply"
-        message="Are you sure you want to save this supply?"
+        message="Are you sure you want to add this supply?"
         details={
           <>
             <p>Name: {form.name || "—"}</p>
@@ -459,25 +503,34 @@ export default function SuppliesPage() {
         title={stock.type === "out" ? "Confirm stock-out" : "Confirm stock-in"}
         message={
           stock.type === "out"
-            ? "Are you sure you want to deduct this stock?"
-            : "Are you sure you want to record this stock-in?"
+            ? "Are you sure you want to record this Stock-out?"
+            : "Are you sure you want to record this Stock-in?"
         }
         details={
-          <>
-            <p>Supply: {selectedStockSupply?.name || "—"}</p>
-            <p>
-              Quantity: {stock.quantity || "0"} {selectedStockSupply?.unit || ""}
-            </p>
-            {stock.type === "out" ? (
-              <p>Current stock: {selectedStockSupply?.currentQuantity ?? "—"}</p>
-            ) : null}
-            <p>Date: {stock.date || "—"}</p>
-            <p>Received by: {stock.receivedBy || "—"}</p>
-            <p>Position: {stock.position || "—"}</p>
-            <p>{stock.type === "in" ? "Reference" : "Purpose"}: {stock.remarks || "—"}</p>
-          </>
+          stock.type === "out" ? (
+            <>
+              <p>Item: {selectedStockSupply?.name || "—"}</p>
+              <p>
+                Quantity: {stock.quantity || "0"}
+                {selectedStockSupply?.unit ? ` ${selectedStockSupply.unit}` : ""}
+              </p>
+              <p>Recipient: {stock.recipientName || "—"}</p>
+              <p>Purpose: {stock.purpose || "—"}</p>
+              <p>Date: {formatHistoryDate(stock.date)}</p>
+            </>
+          ) : (
+            <>
+              <p>Item: {selectedStockSupply?.name || "—"}</p>
+              <p>
+                Quantity: {stock.quantity || "0"}
+                {selectedStockSupply?.unit ? ` ${selectedStockSupply.unit}` : ""}
+              </p>
+              <p>Reference: {stock.reference || "—"}</p>
+              <p>Date: {formatHistoryDate(stock.date)}</p>
+            </>
+          )
         }
-        confirmLabel="Confirm"
+        confirmLabel={stock.type === "out" ? "Confirm Stock-Out" : "Confirm Stock-In"}
         loading={saving}
         onCancel={() => !saving && setConfirmKind(null)}
         onConfirm={confirmSaveStock}

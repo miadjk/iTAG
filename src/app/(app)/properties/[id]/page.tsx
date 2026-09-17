@@ -367,7 +367,7 @@ function AssignForm({
       <ConfirmDialog
         open={confirmOpen}
         title="Confirm assignment"
-        message="Are you sure you want to save this assignment?"
+        message="Are you sure you want to assign this property?"
         details={
           <>
             <p>Property: {property.description || "—"}</p>
@@ -375,7 +375,7 @@ function AssignForm({
             <p>Location: {form.location || "—"}</p>
           </>
         }
-        confirmLabel="Confirm"
+        confirmLabel="Confirm Assignment"
         loading={saving}
         onCancel={() => !saving && setConfirmOpen(false)}
         onConfirm={confirmSave}
@@ -449,14 +449,15 @@ function TransferForm({
         details={
           <>
             <p>Property: {property.description || "—"}</p>
-            <p>Previous accountable person: {property.currentAccountablePerson || "—"}</p>
-            <p>Previous location: {property.location || "—"}</p>
+            <p>Current accountable person: {property.currentAccountablePerson || "—"}</p>
             <p>New accountable person: {form.newAccountablePerson || "—"}</p>
+            <p>Current location: {property.location || "—"}</p>
             <p>New location: {form.newLocation || "—"}</p>
+            <p>Date: {form.date || "—"}</p>
             {form.reason ? <p>Reason: {form.reason}</p> : null}
           </>
         }
-        confirmLabel="Confirm"
+        confirmLabel="Confirm Transfer"
         loading={saving}
         onCancel={() => !saving && setConfirmOpen(false)}
         onConfirm={confirmSave}

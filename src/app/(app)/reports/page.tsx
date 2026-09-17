@@ -58,23 +58,6 @@ function supplyUnitFor(tx: StockTransaction, supplies: ConsumableSupply[]) {
   return supplies.find((s) => s.id === tx.supplyId)?.unit || "";
 }
 
-function stockOutLine(tx: StockTransaction, supplies: ConsumableSupply[]) {
-  const name = supplyNameFor(tx, supplies);
-  const unit = supplyUnitFor(tx, supplies);
-  const qty = unit ? `${tx.quantity} ${unit}` : String(tx.quantity);
-  const recipient = tx.recipient || tx.receivedBy || "—";
-  const purpose = tx.purpose || tx.reference || "—";
-  return `${name} | ${qty} | ${recipient} | ${purpose} | ${formatReportDate(tx.date)}`;
-}
-
-function stockInLine(tx: StockTransaction, supplies: ConsumableSupply[]) {
-  const name = supplyNameFor(tx, supplies);
-  const unit = supplyUnitFor(tx, supplies);
-  const qty = unit ? `${tx.quantity} ${unit}` : String(tx.quantity);
-  const reference = tx.reference || tx.purpose || "—";
-  return `${name} | ${qty} | ${reference} | ${formatReportDate(tx.date)}`;
-}
-
 export default function ReportsPage() {
   const { schoolProperties, schoolSupplies, state, saveReport, user } = useApp();
   const [report, setReport] = useState<ReportType>("Complete Property Inventory");
@@ -107,21 +90,20 @@ export default function ReportsPage() {
           const unit = supplyUnitFor(t, schoolSupplies);
           const qty = unit ? `${t.quantity} ${unit}` : String(t.quantity);
           if (isIn) {
-            return [name, qty, t.reference || t.purpose || "—", formatReportDate(t.date), t.receivedBy || "—"];
+            return [name, qty, t.reference || t.purpose || "—", formatReportDate(t.date)];
           }
           return [
             name,
             qty,
             t.recipient || t.receivedBy || "—",
-            t.purpose || t.reference || "—",
+            t.purpose || "—",
             formatReportDate(t.date),
-            t.position || "—",
           ];
         });
       autoTable(doc, {
         head: isIn
-          ? [["Item / Supply", "Quantity", "Reference", "Date", "Received by"]]
-          : [["Item / Supply", "Quantity", "Recipient", "Purpose", "Date", "Position"]],
+          ? [["Item", "Quantity", "Reference", "Date"]]
+          : [["Item", "Quantity", "Recipient", "Purpose", "Date"]],
         body: rows,
         startY: 24,
       });
@@ -221,25 +203,57 @@ export default function ReportsPage() {
       {error ? <p className="mb-4 break-words text-sm text-red-700">{error}</p> : null}
 
       {report.includes("Stock-In") || report.includes("Stock-Out") ? (
-        <div className="space-y-2">
-          {state.stockTransactions
-            .filter((t) => (report.includes("Stock-In") ? t.type === "in" : t.type === "out"))
-            .map((t) => (
-              <div key={t.id} className="surface p-3 text-sm">
-                <p>
-                  {report.includes("Stock-In")
-                    ? stockInLine(t, schoolSupplies)
-                    : stockOutLine(t, schoolSupplies)}
-                </p>
-                {(t.receivedBy && report.includes("Stock-In")) || t.position ? (
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {[t.receivedBy ? `Received by: ${t.receivedBy}` : null, t.position ? `Position: ${t.position}` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                ) : null}
-              </div>
-            ))}
+        <div className="table-scroll" tabIndex={0} role="region" aria-label={`${report} table`}>
+          <table className="w-full text-sm">
+            <thead className="bg-[#D3D3FF]/40 text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+              <tr>
+                {report.includes("Stock-In") ? (
+                  <>
+                    <th className="p-3 text-left">Item</th>
+                    <th className="p-3 text-left">Quantity</th>
+                    <th className="p-3 text-left">Reference</th>
+                    <th className="p-3 text-left">Date</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="p-3 text-left">Item</th>
+                    <th className="p-3 text-left">Quantity</th>
+                    <th className="p-3 text-left">Recipient</th>
+                    <th className="p-3 text-left">Purpose</th>
+                    <th className="p-3 text-left">Date</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {state.stockTransactions
+                .filter((t) => (report.includes("Stock-In") ? t.type === "in" : t.type === "out"))
+                .map((t) => {
+                  const name = supplyNameFor(t, schoolSupplies);
+                  const unit = supplyUnitFor(t, schoolSupplies);
+                  const qty = unit ? `${t.quantity} ${unit}` : String(t.quantity);
+                  if (report.includes("Stock-In")) {
+                    return (
+                      <tr key={t.id} className="border-t border-[var(--border)]">
+                        <td className="p-3">{name}</td>
+                        <td className="p-3">{qty}</td>
+                        <td className="p-3">{t.reference || t.purpose || "—"}</td>
+                        <td className="p-3">{formatReportDate(t.date)}</td>
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={t.id} className="border-t border-[var(--border)]">
+                      <td className="p-3">{name}</td>
+                      <td className="p-3">{qty}</td>
+                      <td className="p-3">{t.recipient || t.receivedBy || "—"}</td>
+                      <td className="p-3">{t.purpose || "—"}</td>
+                      <td className="p-3">{formatReportDate(t.date)}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
         </div>
       ) : report === "Property Transfer History" ? (
         <div className="space-y-2">

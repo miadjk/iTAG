@@ -152,7 +152,7 @@ export default function AssignmentsPage() {
       <ConfirmDialog
         open={confirmOpen}
         title="Confirm assignment"
-        message="Are you sure you want to save this assignment?"
+        message="Are you sure you want to assign this property?"
         details={
           <>
             <p>Property: {selectedProperty?.description || "—"}</p>
@@ -160,7 +160,7 @@ export default function AssignmentsPage() {
             {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
           </>
         }
-        confirmLabel="Confirm"
+        confirmLabel="Confirm Assignment"
         loading={saving}
         onCancel={() => !saving && setConfirmOpen(false)}
         onConfirm={confirmSave}
