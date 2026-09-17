@@ -1,8 +1,21 @@
 import { ScanResult } from "@/components/scan-result";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 import type { QrPropertyView } from "@/lib/qr";
+import type { PropertyClassification } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+const CLASSIFICATIONS = new Set<PropertyClassification>([
+  "low_value",
+  "high_value",
+  "semi_expendable",
+  "consumable",
+]);
+
+function asClassification(value: unknown): PropertyClassification | undefined {
+  const raw = String(value ?? "");
+  return CLASSIFICATIONS.has(raw as PropertyClassification) ? (raw as PropertyClassification) : undefined;
+}
 
 function mapPublic(row: Record<string, unknown>): QrPropertyView {
   return {
@@ -19,6 +32,9 @@ function mapPublic(row: Record<string, unknown>): QrPropertyView {
     fundSource: String(row.fund_source ?? ""),
     estimatedUsefulLife: String(row.estimated_useful_life ?? ""),
     qrCode: String(row.qr_code ?? ""),
+    classification: asClassification(row.classification),
+    type: String(row.type ?? ""),
+    code: String(row.code ?? ""),
   };
 }
 
