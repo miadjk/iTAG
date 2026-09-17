@@ -84,8 +84,23 @@ export type AppContextValue = {
   upsertSupply: (
     input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt"> & { id?: string },
   ) => Promise<ConsumableSupply>;
-  stockIn: (supplyId: string, quantity: number, date: string, reference: string) => Promise<void>;
-  stockOut: (supplyId: string, quantity: number, date: string, recipient: string, purpose: string) => Promise<void>;
+  stockIn: (input: {
+    supplyId: string;
+    quantity: number;
+    date: string;
+    receivedBy: string;
+    position: string;
+    remarks: string;
+    reference?: string;
+  }) => Promise<void>;
+  stockOut: (input: {
+    supplyId: string;
+    quantity: number;
+    date: string;
+    receivedBy: string;
+    position: string;
+    remarks: string;
+  }) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   findPropertyByQr: (code: string) => PropertyRecord | undefined;

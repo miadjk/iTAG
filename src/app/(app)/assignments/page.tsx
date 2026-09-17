@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -21,6 +22,8 @@ export default function AssignmentsPage() {
       : all.filter((a) => a.assignedUserId === user?.id || a.assignedBy === user?.id);
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     propertyId: "",
     assignedUserId: "",
@@ -31,6 +34,40 @@ export default function AssignmentsPage() {
     deadline: "",
     status: "pending" as const,
   });
+
+  const selectedProperty = schoolProperties.find((p) => p.id === form.propertyId);
+  const selectedUser = schoolUsers.find((u) => u.id === form.assignedUserId);
+
+  function requestSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.propertyId || !form.assignedUserId) {
+      setFormError("This field is required.");
+      return;
+    }
+    setFormError("");
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await assignProperty({
+        ...form,
+        accountablePerson: selectedUser
+          ? `${selectedUser.firstName} ${selectedUser.lastName}`
+          : form.accountablePerson,
+      });
+      setFormError("");
+      setConfirmOpen(false);
+      setOpen(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Unable to save assignment.");
+      setConfirmOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
@@ -48,29 +85,7 @@ export default function AssignmentsPage() {
       />
 
       {user?.role === "school_head" && can("assign") && open ? (
-        <form
-          className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!form.propertyId || !form.assignedUserId) {
-              setFormError("This field is required.");
-              return;
-            }
-            try {
-              await assignProperty({
-                ...form,
-                accountablePerson:
-                  schoolUsers.find((u) => u.id === form.assignedUserId)
-                    ? `${schoolUsers.find((u) => u.id === form.assignedUserId)?.firstName} ${schoolUsers.find((u) => u.id === form.assignedUserId)?.lastName}`
-                    : form.accountablePerson,
-              });
-              setFormError("");
-              setOpen(false);
-            } catch (err) {
-              setFormError(err instanceof Error ? err.message : "Unable to save assignment.");
-            }
-          }}
-        >
+        <form className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSave}>
           <Field label="Property">
             <Select value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })}>
               <option value="">Select property</option>
@@ -133,6 +148,23 @@ export default function AssignmentsPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm assignment"
+        message="Are you sure you want to save this assignment?"
+        details={
+          <>
+            <p>Property: {selectedProperty?.description || "—"}</p>
+            <p>Assigned user: {selectedUser ? displayName(selectedUser) : "—"}</p>
+            {form.deadline ? <p>Deadline: {form.deadline}</p> : null}
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmOpen(false)}
+        onConfirm={confirmSave}
+      />
     </div>
   );
 }

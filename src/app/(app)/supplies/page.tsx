@@ -4,16 +4,25 @@ import { useMemo, useState } from "react";
 import { Search, Warehouse } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { useApp } from "@/lib/app-context";
-import { supplyStatusBadge } from "@/components/badges";
+import { classLabel, supplyStatusBadge } from "@/components/badges";
+import { codeForType, CONSUMABLE_TYPES, validateTypeFields } from "@/lib/property-types";
+import { formatLongDate } from "@/lib/utils";
+import type { PropertyClassification } from "@/types";
 
 export default function SuppliesPage() {
   const { schoolSupplies, can, upsertSupply, stockIn, stockOut, state } = useApp();
   const [open, setOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [historySupplyId, setHistorySupplyId] = useState("");
   const [query, setQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirmKind, setConfirmKind] = useState<"supply" | "stock" | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -22,20 +31,157 @@ export default function SuppliesPage() {
     minimumStockLevel: "",
     location: "",
     remarks: "",
+    classification: "consumable" as PropertyClassification,
+    type: "",
+    code: "",
   });
-  const [stock, setStock] = useState({ supplyId: "", type: "in" as "in" | "out", quantity: "", date: new Date().toISOString().slice(0, 10), reference: "", recipient: "", purpose: "" });
+  const [stock, setStock] = useState({
+    supplyId: "",
+    type: "in" as "in" | "out",
+    quantity: "",
+    date: new Date().toISOString().slice(0, 10),
+    receivedBy: "",
+    position: "",
+    remarks: "",
+  });
 
   const filteredSupplies = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return schoolSupplies;
     return schoolSupplies.filter((s) => {
-      const haystack = [s.name, s.unit, s.description, s.location, s.remarks]
+      const haystack = [s.name, s.type, s.unit, s.code, s.location]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
   }, [schoolSupplies, query]);
+
+  const historySupply = schoolSupplies.find((s) => s.id === historySupplyId) ?? null;
+  const supplyHistory = useMemo(() => {
+    const rows = state.stockTransactions
+      .filter((t) => (historySupplyId ? t.supplyId === historySupplyId : true))
+      .slice()
+      .sort((a, b) => {
+        const da = `${a.date || ""} ${a.createdAt || ""}`;
+        const db = `${b.date || ""} ${b.createdAt || ""}`;
+        return db.localeCompare(da);
+      });
+    return rows;
+  }, [state.stockTransactions, historySupplyId]);
+
+  const selectedStockSupply = schoolSupplies.find((s) => s.id === stock.supplyId);
+
+  function setConsumableType(typeLabel: string) {
+    setForm((prev) => ({
+      ...prev,
+      type: typeLabel,
+      code: codeForType(prev.classification, typeLabel),
+    }));
+  }
+
+  function resetForm() {
+    setForm({
+      name: "",
+      description: "",
+      unit: "ream",
+      currentQuantity: "",
+      minimumStockLevel: "",
+      location: "",
+      remarks: "",
+      classification: "consumable",
+      type: "",
+      code: "",
+    });
+  }
+
+  function requestSaveSupply(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    const typeErrors = validateTypeFields(form.classification, form.type, form.code);
+    if (typeErrors.type || typeErrors.code) {
+      setFormError(typeErrors.type || typeErrors.code || "Select a valid type.");
+      return;
+    }
+    if (!form.name.trim()) {
+      setFormError("Supply name is required.");
+      return;
+    }
+    setConfirmKind("supply");
+  }
+
+  function requestSaveStock(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!stock.supplyId) {
+      setError("Select a supply.");
+      return;
+    }
+    if (!(Number(stock.quantity) > 0)) {
+      setError("Enter a valid quantity.");
+      return;
+    }
+    setConfirmKind("stock");
+  }
+
+  async function confirmSaveSupply() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await upsertSupply({
+        ...form,
+        description: "",
+        remarks: "",
+        currentQuantity: Number(form.currentQuantity) || 0,
+        minimumStockLevel: Number(form.minimumStockLevel) || 0,
+      });
+      setOpen(false);
+      resetForm();
+      setConfirmKind(null);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Unable to save supply.");
+      setConfirmKind(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmSaveStock() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const qty = Number(stock.quantity) || 0;
+      if (stock.type === "in") {
+        await stockIn({
+          supplyId: stock.supplyId,
+          quantity: qty,
+          date: stock.date,
+          receivedBy: stock.receivedBy,
+          position: stock.position,
+          remarks: stock.remarks,
+          reference: stock.remarks,
+        });
+      } else {
+        await stockOut({
+          supplyId: stock.supplyId,
+          quantity: qty,
+          date: stock.date,
+          receivedBy: stock.receivedBy,
+          position: stock.position,
+          remarks: stock.remarks,
+        });
+      }
+      setStock((prev) => ({ ...prev, quantity: "", receivedBy: "", position: "", remarks: "" }));
+      setHistorySupplyId(stock.supplyId);
+      setConfirmKind(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to record stock movement.");
+      setConfirmKind(null);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
@@ -45,41 +191,131 @@ export default function SuppliesPage() {
         description="Track stock-in, stock-out, current quantity, low-stock status, and supply history separately from properties."
         actions={
           can("supplies") ? (
-            <Button type="button" onClick={() => setOpen((v) => !v)}>
-              {open ? "Close form" : "Add supply"}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setOpen((v) => !v);
+                  if (!open) setShowHistory(false);
+                }}
+              >
+                {open ? "Close form" : "Add Supply"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowHistory((v) => !v);
+                  if (!showHistory) setOpen(false);
+                }}
+              >
+                {showHistory ? "Close History" : "View History"}
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+              {showHistory ? "Close History" : "View History"}
             </Button>
-          ) : null
+          )
         }
       />
 
+      {showHistory ? (
+        <section className="surface mb-6 p-4 sm:p-5">
+          <h2 className="font-display break-words text-xl sm:text-2xl">Supply history</h2>
+          {schoolSupplies.length > 0 ? (
+            <div className="mt-4 max-w-md">
+              <Field label="Filter by supply">
+                <Select value={historySupplyId} onChange={(e) => setHistorySupplyId(e.target.value)}>
+                  <option value="">All supplies</option>
+                  {schoolSupplies.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          ) : null}
+          {historySupply ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {historySupply.name} · Current stock: {historySupply.currentQuantity} {historySupply.unit}
+            </p>
+          ) : null}
+          <div className="mt-4 space-y-2">
+            {supplyHistory.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No stock movements yet.</p>
+            ) : (
+              supplyHistory.map((t) => {
+                const supply = schoolSupplies.find((s) => s.id === t.supplyId);
+                return (
+                  <article key={t.id} className="border border-[var(--border)] p-3 text-sm">
+                    <p className="uppercase tracking-widest text-[11px] text-[var(--text-muted)]">
+                      {supply?.name || "Supply"} · {t.type === "in" ? "Stock In" : "Stock Out"}
+                    </p>
+                    <p className="mt-1">
+                      Quantity: {t.type === "in" ? "+" : "-"}
+                      {t.quantity} {supply?.unit || ""}
+                    </p>
+                    <p>
+                      Previous: {t.previousQuantity} → New: {t.newQuantity}
+                    </p>
+                    <p>Date: {formatLongDate(t.date) || t.date || "—"}</p>
+                    {t.receivedBy ? (
+                      <p>
+                        Received by: {t.receivedBy}
+                        {t.position ? ` · ${t.position}` : ""}
+                      </p>
+                    ) : null}
+                    {t.purpose || t.reference ? <p>Remarks/Purpose: {t.purpose || t.reference}</p> : null}
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </section>
+      ) : null}
+
       {can("supplies") && open ? (
-        <form
-          className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            upsertSupply({
-              ...form,
-              currentQuantity: Number(form.currentQuantity) || 0,
-              minimumStockLevel: Number(form.minimumStockLevel) || 0,
-            });
-            setOpen(false);
-            setForm({
-              name: "",
-              description: "",
-              unit: "ream",
-              currentQuantity: "",
-              minimumStockLevel: "",
-              location: "",
-              remarks: "",
-            });
-          }}
-        >
+        <form className="surface mb-6 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSaveSupply} noValidate>
           <Field label="Supply name" required>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
           <Field label="Unit">
             <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
           </Field>
+          <Field label="Classification">
+            <Select
+              value={form.classification}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  classification: e.target.value as PropertyClassification,
+                  type: "",
+                  code: "",
+                })
+              }
+            >
+              <option value="consumable">Consumable</option>
+            </Select>
+          </Field>
+          {form.classification === "consumable" ? (
+            <Field label="Consumable Type">
+              <Select value={form.type} onChange={(e) => setConsumableType(e.target.value)}>
+                <option value="">Select type</option>
+                {CONSUMABLE_TYPES.map((t) => (
+                  <option key={t.code + t.label} value={t.label}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          {form.classification === "consumable" ? (
+            <Field label="Code">
+              <Input readOnly value={form.code} placeholder="Auto-generated" />
+            </Field>
+          ) : null}
           <Field label="Current quantity">
             <Input
               type="number"
@@ -101,14 +337,7 @@ export default function SuppliesPage() {
           <Field label="Location">
             <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
           </Field>
-          <Field label="Description">
-            <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </Field>
-          <div className="md:col-span-2">
-            <Field label="Remarks">
-              <Textarea value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
-            </Field>
-          </div>
+          {formError ? <p className="break-words text-sm text-red-700 md:col-span-2">{formError}</p> : null}
           <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">Save supply</Button>
         </form>
       ) : null}
@@ -132,13 +361,20 @@ export default function SuppliesPage() {
           ) : (
             filteredSupplies.map((s) => (
               <article key={s.id} className="surface p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1 text-sm">
                     <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    <p className="text-xs text-[var(--text-muted)]">
                       Current stock: {s.currentQuantity} {s.unit} · Minimum stock: {s.minimumStockLevel}
                       {s.location ? ` · ${s.location}` : ""}
                     </p>
+                    {s.classification ? (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Classification: {classLabel(s.classification)}
+                        {s.type ? ` · Type: ${s.type}` : ""}
+                        {s.code ? ` · Code: ${s.code}` : ""}
+                      </p>
+                    ) : null}
                   </div>
                   {supplyStatusBadge(s.status)}
                 </div>
@@ -149,45 +385,23 @@ export default function SuppliesPage() {
       )}
 
       {can("supplies") && schoolSupplies.length > 0 ? (
-        <form
-          className="surface mt-8 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setError("");
-            try {
-              const qty = Number(stock.quantity) || 0;
-              if (stock.type === "in") stockIn(stock.supplyId, qty, stock.date, stock.reference);
-              else stockOut(stock.supplyId, qty, stock.date, stock.recipient, stock.purpose);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Unable to record stock movement.");
-            }
-          }}
-        >
+        <form className="surface mt-8 grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2" onSubmit={requestSaveStock}>
           <h2 className="font-display text-2xl md:col-span-2">Stock-in / stock-out</h2>
           <Field label="Supply" required>
-            <select
-              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#3F3FA3] focus:outline-none focus:ring-2 focus:ring-[#D3D3FF]"
-              value={stock.supplyId}
-              onChange={(e) => setStock({ ...stock, supplyId: e.target.value })}
-              required
-            >
+            <Select value={stock.supplyId} onChange={(e) => setStock({ ...stock, supplyId: e.target.value })} required>
               <option value="">Select supply</option>
               {schoolSupplies.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name}
+                  {s.name} ({s.currentQuantity} {s.unit})
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Movement">
-            <select
-              className="h-11 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[#FFFFFF] px-3 text-sm focus:border-[#3F3FA3] focus:outline-none focus:ring-2 focus:ring-[#D3D3FF]"
-              value={stock.type}
-              onChange={(e) => setStock({ ...stock, type: e.target.value as "in" | "out" })}
-            >
+            <Select value={stock.type} onChange={(e) => setStock({ ...stock, type: e.target.value as "in" | "out" })}>
               <option value="in">Stock-in</option>
               <option value="out">Stock-out</option>
-            </select>
+            </Select>
           </Field>
           <Field label="Quantity" required>
             <Input
@@ -201,39 +415,73 @@ export default function SuppliesPage() {
           <Field label="Date">
             <Input type="date" value={stock.date} onChange={(e) => setStock({ ...stock, date: e.target.value })} />
           </Field>
-          {stock.type === "in" ? (
-            <Field label="Reference">
-              <Input value={stock.reference} onChange={(e) => setStock({ ...stock, reference: e.target.value })} />
+          <Field label="Received by">
+            <Input value={stock.receivedBy} onChange={(e) => setStock({ ...stock, receivedBy: e.target.value })} />
+          </Field>
+          <Field label="Position">
+            <Input value={stock.position} onChange={(e) => setStock({ ...stock, position: e.target.value })} />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label={stock.type === "in" ? "Reference / remarks" : "Purpose / remarks"}>
+              <Input value={stock.remarks} onChange={(e) => setStock({ ...stock, remarks: e.target.value })} />
             </Field>
-          ) : (
-            <>
-              <Field label="Recipient">
-                <Input value={stock.recipient} onChange={(e) => setStock({ ...stock, recipient: e.target.value })} />
-              </Field>
-              <Field label="Purpose">
-                <Input value={stock.purpose} onChange={(e) => setStock({ ...stock, purpose: e.target.value })} />
-              </Field>
-            </>
-          )}
+          </div>
           {error ? <p className="break-words text-sm text-red-700 md:col-span-2">{error}</p> : null}
-          <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">{stock.type === "in" ? "Save stock-in" : "Save stock-out"}</Button>
+          <Button type="submit" className="w-full sm:w-auto md:col-span-2 md:justify-self-start">
+            {stock.type === "in" ? "Save stock-in" : "Save stock-out"}
+          </Button>
         </form>
       ) : null}
 
-      <section className="mt-8">
-        <h2 className="font-display text-2xl">Supply history</h2>
-        <div className="mt-4 space-y-2">
-          {state.stockTransactions.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No stock movements yet.</p>
-          ) : (
-            state.stockTransactions.slice(0, 20).map((t) => (
-              <p key={t.id} className="border border-[var(--border)] p-3 text-sm">
-                {t.type === "in" ? "IN" : "OUT"} · {t.quantity} · {t.date} {t.recipient ? `· ${t.recipient}` : ""} {t.reference ? `· ${t.reference}` : ""}
-              </p>
-            ))
-          )}
-        </div>
-      </section>
+      <ConfirmDialog
+        open={confirmKind === "supply"}
+        title="Confirm supply"
+        message="Are you sure you want to save this supply?"
+        details={
+          <>
+            <p>Name: {form.name || "—"}</p>
+            <p>Unit: {form.unit || "—"}</p>
+            <p>Type: {form.type || "—"}</p>
+            <p>Code: {form.code || "—"}</p>
+            <p>Initial quantity: {form.currentQuantity || "0"}</p>
+            <p>Minimum stock: {form.minimumStockLevel || "0"}</p>
+            <p>Location: {form.location || "—"}</p>
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmKind(null)}
+        onConfirm={confirmSaveSupply}
+      />
+
+      <ConfirmDialog
+        open={confirmKind === "stock"}
+        title={stock.type === "out" ? "Confirm stock-out" : "Confirm stock-in"}
+        message={
+          stock.type === "out"
+            ? "Are you sure you want to deduct this stock?"
+            : "Are you sure you want to record this stock-in?"
+        }
+        details={
+          <>
+            <p>Supply: {selectedStockSupply?.name || "—"}</p>
+            <p>
+              Quantity: {stock.quantity || "0"} {selectedStockSupply?.unit || ""}
+            </p>
+            {stock.type === "out" ? (
+              <p>Current stock: {selectedStockSupply?.currentQuantity ?? "—"}</p>
+            ) : null}
+            <p>Date: {stock.date || "—"}</p>
+            <p>Received by: {stock.receivedBy || "—"}</p>
+            <p>Position: {stock.position || "—"}</p>
+            <p>{stock.type === "in" ? "Reference" : "Purpose"}: {stock.remarks || "—"}</p>
+          </>
+        }
+        confirmLabel="Confirm"
+        loading={saving}
+        onCancel={() => !saving && setConfirmKind(null)}
+        onConfirm={confirmSaveStock}
+      />
     </div>
   );
 }
