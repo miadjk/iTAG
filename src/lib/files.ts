@@ -32,5 +32,6 @@ export async function downloadIcsExcel(icsNumber: string) {
 }
 
 export async function downloadPropertyExcel(property: PropertyRecord, _all: PropertyRecord[] = []) {
+  void _all;
   await downloadIcsExcel(property.icsNumber);
 }
