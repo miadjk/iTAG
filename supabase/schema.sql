@@ -148,6 +148,9 @@ create index if not exists consumable_supplies_identity_idx
     lower(btrim(code))
   );
 
+create index if not exists consumable_supplies_archived_idx
+  on public.consumable_supplies (school_id, archived);
+
 create table if not exists public.stock_transactions (
   id uuid primary key default gen_random_uuid(),
   supply_id uuid not null references public.consumable_supplies(id) on delete cascade,
