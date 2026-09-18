@@ -140,8 +140,10 @@ export const CLASSIFICATIONS: { value: PropertyClassification; label: string }[]
   { value: "high_value", label: "High-Value" },
   { value: "low_value", label: "Low-Value" },
   { value: "semi_expendable", label: "Semi-Expendable" },
-  { value: "consumable", label: "Consumable" },
 ];
+
+/** Classifications available when encoding/editing properties (Consumable belongs in Supplies only). */
+export const PROPERTY_CLASSIFICATIONS = CLASSIFICATIONS;
 
 export const CONDITIONS: { value: PropertyCondition; label: string }[] = [
   { value: "serviceable", label: "Serviceable" },

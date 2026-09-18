@@ -16,7 +16,6 @@ import { downloadPropertyExcel } from "@/lib/files";
 import {
   classificationNeedsType,
   codeForType,
-  CONSUMABLE_TYPES,
   normalizeTypeFields,
   SEMI_EXPENDABLE_TYPES,
   validateTypeFields,
@@ -195,21 +194,28 @@ function EditForm({
     setForm((prev) => ({
       ...prev,
       classification,
-      type: "",
-      code: "",
+      type: classification === "semi_expendable" ? prev.type : "",
+      code: classification === "semi_expendable" ? prev.code : "",
     }));
   }
 
   function setPropertyType(typeLabel: string) {
     setForm((prev) => ({
       ...prev,
+      classification: "semi_expendable",
       type: typeLabel,
-      code: codeForType(prev.classification, typeLabel),
+      code: codeForType("semi_expendable", typeLabel),
     }));
   }
 
   function requestSave(e: React.FormEvent) {
     e.preventDefault();
+    if (form.classification === "consumable") {
+      setFieldErrors({
+        propertyType: "Consumables belong in Supplies. Change Classification to Semi-Expendable.",
+      });
+      return;
+    }
     const typeErrors = validateTypeFields(form.classification, form.type, form.code);
     const next: Record<string, string> = {};
     if (typeErrors.type) next.propertyType = typeErrors.type;
@@ -233,6 +239,11 @@ function EditForm({
     }
   }
 
+  const classificationOptions =
+    form.classification === "consumable"
+      ? [...CLASSIFICATIONS, { value: "consumable" as const, label: "Consumable (move to Supplies)" }]
+      : CLASSIFICATIONS;
+
   return (
     <>
     <form
@@ -244,7 +255,7 @@ function EditForm({
           value={form.classification}
           onChange={(e) => setClassification(e.target.value as PropertyClassification)}
         >
-          {CLASSIFICATIONS.map((c) => (
+          {classificationOptions.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
             </option>
@@ -252,7 +263,7 @@ function EditForm({
         </Select>
       </Field>
       {form.classification === "semi_expendable" ? (
-        <Field label="Semi-Expendable Type" error={fieldErrors.propertyType}>
+        <Field label="Semi-Expendable Property Type" error={fieldErrors.propertyType}>
           <Select value={form.type} onChange={(e) => setPropertyType(e.target.value)}>
             <option value="">Select type</option>
             {SEMI_EXPENDABLE_TYPES.map((t) => (
@@ -264,18 +275,11 @@ function EditForm({
         </Field>
       ) : null}
       {form.classification === "consumable" ? (
-        <Field label="Consumable Type" error={fieldErrors.propertyType}>
-          <Select value={form.type} onChange={(e) => setPropertyType(e.target.value)}>
-            <option value="">Select type</option>
-            {CONSUMABLE_TYPES.map((t) => (
-              <option key={t.code + t.label} value={t.label}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <p className="break-words text-sm text-[var(--text-muted)] md:col-span-2">
+          Consumable inventory is managed in Supplies. Change Classification to Semi-Expendable to keep this as a property.
+        </p>
       ) : null}
-      {classificationNeedsType(form.classification) ? (
+      {classificationNeedsType(form.classification) && form.classification === "semi_expendable" ? (
         <Field label="Code" error={fieldErrors.propertyCode}>
           <Input readOnly value={form.code} placeholder="Auto-generated" />
         </Field>

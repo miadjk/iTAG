@@ -346,6 +346,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (seen.has(item.toLowerCase())) throw new Error(`Duplicate Item No. in this form: ${item}`);
       seen.add(item.toLowerCase());
       assertUniqueItem(item);
+      if (input.classification === "consumable") {
+        throw new Error("Consumable items must be encoded in Supplies, not Add Property.");
+      }
       const typeErrors = validateTypeFields(input.classification, input.type || "", input.code || "");
       if (typeErrors.type || typeErrors.code) {
         throw new Error(typeErrors.type || typeErrors.code || "Invalid type/code for classification.");
@@ -453,6 +456,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const typeErrors = validateTypeFields(input.classification, input.type || "", input.code || "");
     if (typeErrors.type || typeErrors.code) {
       throw new Error(typeErrors.type || typeErrors.code || "Invalid type/code for classification.");
+    }
+    if (input.classification === "consumable") {
+      throw new Error("Consumable items must be managed in Supplies, not as properties.");
     }
     const totalCost = input.totalCost ?? input.unitCost * input.quantity;
     const typeFields = normalizeTypeFields(input.classification, input.type || "", input.code || "");

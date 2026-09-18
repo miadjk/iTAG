@@ -7,12 +7,10 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select } from "@/components/ui/field";
-import { CLASSIFICATIONS, useApp, type PropertyInput } from "@/lib/app-context";
+import { useApp, type PropertyInput } from "@/lib/app-context";
 import { getSchoolName } from "@/lib/locations";
 import {
-  classificationNeedsType,
   codeForType,
-  CONSUMABLE_TYPES,
   normalizeTypeFields,
   SEMI_EXPENDABLE_TYPES,
   validateTypeFields,
@@ -63,7 +61,7 @@ export default function NewPropertyPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const schoolName = getSchoolName(user?.schoolId) || user?.schoolName || "";
   const [header, setHeader] = useState({
-    classification: "low_value" as PropertyClassification,
+    classification: "semi_expendable" as PropertyClassification,
     type: "",
     code: "",
     entityName: schoolName,
@@ -104,7 +102,7 @@ export default function NewPropertyPage() {
       fundCluster: prev.fundCluster || first.fundCluster,
       location: prev.location || first.location,
       officeDepartment: prev.officeDepartment || first.officeDepartment,
-      classification: prev.classification || first.classification,
+      classification: "semi_expendable",
       type: prev.type || first.type || "",
       code: prev.code || first.code || "",
       receivedFromName: prev.receivedFromName || first.receivedFromName || "",
@@ -114,20 +112,12 @@ export default function NewPropertyPage() {
     }));
   }, [existingGroup]);
 
-  function setClassification(classification: PropertyClassification) {
-    setHeader((prev) => ({
-      ...prev,
-      classification,
-      type: "",
-      code: "",
-    }));
-  }
-
   function setPropertyType(typeLabel: string) {
     setHeader((prev) => ({
       ...prev,
+      classification: "semi_expendable",
       type: typeLabel,
-      code: codeForType(prev.classification, typeLabel),
+      code: codeForType("semi_expendable", typeLabel),
     }));
   }
 
@@ -148,7 +138,7 @@ export default function NewPropertyPage() {
     if (!header.receivedFromPosition.trim()) next.receivedFromPosition = "This field is required.";
     if (!header.receivedByName.trim()) next.receivedByName = "This field is required.";
     if (!header.receivedByPosition.trim()) next.receivedByPosition = "This field is required.";
-    const typeErrors = validateTypeFields(header.classification, header.type, header.code);
+    const typeErrors = validateTypeFields("semi_expendable", header.type, header.code);
     if (typeErrors.type) next.propertyType = typeErrors.type;
     if (typeErrors.code) next.propertyCode = typeErrors.code;
     items.forEach((item, index) => {
@@ -185,9 +175,9 @@ export default function NewPropertyPage() {
     if (loading) return;
     setLoading(true);
     try {
-      const typeFields = normalizeTypeFields(header.classification, header.type, header.code);
+      const typeFields = normalizeTypeFields("semi_expendable", header.type, header.code);
       const payload: PropertyInput[] = items.map((item) => ({
-        classification: header.classification,
+        classification: "semi_expendable",
         type: typeFields.type,
         code: typeFields.code,
         entityName: header.entityName.trim(),
@@ -239,46 +229,21 @@ export default function NewPropertyPage() {
       <form onSubmit={requestSave} noValidate className="space-y-6 sm:space-y-8">
         <section className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
           <Field label="Classification">
-            <Select
-              value={header.classification}
-              onChange={(e) => setClassification(e.target.value as PropertyClassification)}
-            >
-              {CLASSIFICATIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
+            <Input readOnly value="Semi-Expendable" />
+          </Field>
+          <Field label="Semi-Expendable Property Type" error={fieldErrors.propertyType}>
+            <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
+              <option value="">Select type</option>
+              {SEMI_EXPENDABLE_TYPES.map((t) => (
+                <option key={t.code + t.label} value={t.label}>
+                  {t.label}
                 </option>
               ))}
             </Select>
           </Field>
-          {header.classification === "semi_expendable" ? (
-            <Field label="Semi-Expendable Type" error={fieldErrors.propertyType}>
-              <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
-                <option value="">Select type</option>
-                {SEMI_EXPENDABLE_TYPES.map((t) => (
-                  <option key={t.code + t.label} value={t.label}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          ) : null}
-          {header.classification === "consumable" ? (
-            <Field label="Consumable Type" error={fieldErrors.propertyType}>
-              <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
-                <option value="">Select type</option>
-                {CONSUMABLE_TYPES.map((t) => (
-                  <option key={t.code + t.label} value={t.label}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          ) : null}
-          {classificationNeedsType(header.classification) ? (
-            <Field label="Code" error={fieldErrors.propertyCode}>
-              <Input readOnly value={header.code} placeholder="Auto-generated" />
-            </Field>
-          ) : null}
+          <Field label="Code" error={fieldErrors.propertyCode}>
+            <Input readOnly value={header.code} placeholder="Auto-generated" />
+          </Field>
           <Field label="Entity" error={fieldErrors.entityName}>
             <Input value={header.entityName} onChange={(e) => setHeader({ ...header, entityName: e.target.value })} />
           </Field>
@@ -414,6 +379,9 @@ export default function NewPropertyPage() {
         message={items.length > 1 ? "Are you sure you want to save these properties?" : "Are you sure you want to save this property?"}
         details={
           <>
+            <p>Classification: Semi-Expendable</p>
+            <p>Semi-Expendable Property Type: {header.type || "—"}</p>
+            <p>Code: {header.code || "—"}</p>
             <p>ICSNO.: {header.icsNumber || "—"}</p>
             <p>Entity: {header.entityName || "—"}</p>
             <p>Items: {items.length}</p>

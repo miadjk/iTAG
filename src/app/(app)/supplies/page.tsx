@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useApp } from "@/lib/app-context";
 import { classLabel, supplyStatusBadge } from "@/components/badges";
-import { codeForType, CONSUMABLE_TYPES, validateTypeFields } from "@/lib/property-types";
+import { codeForType, CONSUMABLE_TYPES, groupSuppliesByConsumableType, validateTypeFields } from "@/lib/property-types";
 import type { ConsumableSupply, PropertyClassification } from "@/types";
 
 export default function SuppliesPage() {
@@ -68,6 +68,11 @@ export default function SuppliesPage() {
     });
   }, [schoolSupplies, query]);
 
+  const supplyTypeGroups = useMemo(
+    () => groupSuppliesByConsumableType(filteredSupplies),
+    [filteredSupplies],
+  );
+
   const editingSupply = editingId ? schoolSupplies.find((s) => s.id === editingId) : null;
   const availableStockDisplay = editingSupply ? editingSupply.currentQuantity : 0;
 
@@ -92,8 +97,9 @@ export default function SuppliesPage() {
   function setConsumableType(typeLabel: string) {
     setForm((prev) => ({
       ...prev,
+      classification: "consumable",
       type: typeLabel,
-      code: codeForType(prev.classification, typeLabel),
+      code: codeForType("consumable", typeLabel),
     }));
   }
 
@@ -275,7 +281,7 @@ export default function SuppliesPage() {
       <PageHeader
         kicker="Consumable supplies"
         title="Stock levels"
-        description="Track stock-in, stock-out, available stock, and supply history separately from properties."
+        description="Track consumable inventory by type. Stock-in, stock-out, available stock, and supply history stay separate from semi-expendable properties."
         actions={
           can("supplies") ? (
             <div className="flex flex-wrap gap-2">
@@ -380,37 +386,21 @@ export default function SuppliesPage() {
             <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
           </Field>
           <Field label="Classification">
-            <Select
-              value={form.classification}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  classification: e.target.value as PropertyClassification,
-                  type: "",
-                  code: "",
-                })
-              }
-            >
-              <option value="consumable">Consumable</option>
+            <Input readOnly value="Consumable" />
+          </Field>
+          <Field label="Consumable Type">
+            <Select value={form.type} onChange={(e) => setConsumableType(e.target.value)}>
+              <option value="">Select type</option>
+              {CONSUMABLE_TYPES.map((t) => (
+                <option key={t.code + t.label} value={t.label}>
+                  {t.label}
+                </option>
+              ))}
             </Select>
           </Field>
-          {form.classification === "consumable" ? (
-            <Field label="Consumable Type">
-              <Select value={form.type} onChange={(e) => setConsumableType(e.target.value)}>
-                <option value="">Select type</option>
-                {CONSUMABLE_TYPES.map((t) => (
-                  <option key={t.code + t.label} value={t.label}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          ) : null}
-          {form.classification === "consumable" ? (
-            <Field label="Code">
-              <Input readOnly value={form.code} placeholder="Auto-generated" />
-            </Field>
-          ) : null}
+          <Field label="Code">
+            <Input readOnly value={form.code} placeholder="Auto-generated" />
+          </Field>
           <Field label="Available stock">
             <Input
               type="number"
@@ -472,41 +462,49 @@ export default function SuppliesPage() {
           {filteredSupplies.length === 0 ? (
             <p className="surface p-4 text-sm text-[var(--text-muted)]">No supplies found.</p>
           ) : (
-            filteredSupplies.map((s) => (
-              <article key={s.id} className="surface p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-1 text-sm">
-                    <h2 className="break-words text-sm uppercase tracking-widest">{s.name}</h2>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Unit: {s.unit || "—"}
-                      {s.location ? ` · ${s.location}` : ""}
-                    </p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Available stock: {s.currentQuantity} {s.unit}
-                    </p>
-                    {s.classification ? (
-                      <p className="text-xs text-[var(--text-muted)]">
-                        Classification: {classLabel(s.classification)}
-                        {s.type ? ` · Type: ${s.type}` : ""}
-                        {s.code ? ` · Code: ${s.code}` : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-start gap-2 sm:items-end">
-                    {supplyStatusBadge(s.status)}
-                    {can("supplies") ? (
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" variant="secondary" onClick={() => startEdit(s)}>
-                          <Pencil className="h-4 w-4" /> Edit
-                        </Button>
-                        <Button type="button" variant="secondary" onClick={() => requestDelete(s)}>
-                          <Trash2 className="h-4 w-4" /> Delete
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
+            supplyTypeGroups.map((group) => (
+              <section key={group.key} className="space-y-3">
+                <div className="px-1">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+                    {group.code ? `Code: ${group.code}` : "Consumable type"}
+                  </p>
+                  <h2 className="font-display text-2xl">{group.label}</h2>
                 </div>
-              </article>
+                {group.items.map((s) => (
+                  <article key={s.id} className="surface p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-1 text-sm">
+                        <h3 className="break-words text-sm uppercase tracking-widest">{s.name}</h3>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Unit: {s.unit || "—"}
+                          {s.location ? ` · ${s.location}` : ""}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Available stock: {s.currentQuantity} {s.unit}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Classification: {classLabel(s.classification || "consumable")}
+                          {s.type ? ` · Type: ${s.type}` : ""}
+                          {s.code ? ` · Code: ${s.code}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        {supplyStatusBadge(s.status)}
+                        {can("supplies") ? (
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="secondary" onClick={() => startEdit(s)}>
+                              <Pencil className="h-4 w-4" /> Edit
+                            </Button>
+                            <Button type="button" variant="secondary" onClick={() => requestDelete(s)}>
+                              <Trash2 className="h-4 w-4" /> Delete
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </section>
             ))
           )}
         </div>
@@ -520,7 +518,9 @@ export default function SuppliesPage() {
               <option value="">Select supply</option>
               {schoolSupplies.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} (Available: {s.currentQuantity} {s.unit})
+                  {s.name}
+                  {s.type ? ` · ${s.type}` : ""}
+                  {s.code ? ` (${s.code})` : ""} — Available: {s.currentQuantity} {s.unit}
                 </option>
               ))}
             </Select>

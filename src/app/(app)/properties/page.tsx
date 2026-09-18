@@ -10,7 +10,8 @@ import { Field, Input } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
 import { useApp } from "@/lib/app-context";
 import { downloadIcsExcel } from "@/lib/files";
-import { groupByIcs, searchProperties } from "@/lib/search";
+import { groupPropertiesBySemiExpendableType } from "@/lib/property-types";
+import { searchProperties } from "@/lib/search";
 
 export default function PropertiesPage() {
   const { schoolProperties, can } = useApp();
@@ -18,7 +19,10 @@ export default function PropertiesPage() {
   const [qrId, setQrId] = useState<string | null>(null);
   const [excelError, setExcelError] = useState("");
   const qrProperty = schoolProperties.find((p) => p.id === qrId);
-  const groups = useMemo(() => groupByIcs(schoolProperties), [schoolProperties]);
+  const typeGroups = useMemo(
+    () => groupPropertiesBySemiExpendableType(schoolProperties),
+    [schoolProperties],
+  );
   const result = useMemo(() => searchProperties(schoolProperties, query), [schoolProperties, query]);
 
   async function downloadGroup(ics: string) {
@@ -35,7 +39,7 @@ export default function PropertiesPage() {
       <PageHeader
         kicker="Inventory"
         title={can("encode") ? "My properties" : "Property records"}
-        description="Search by Item No. for one property, or ICSNO. for the whole group. Each item has its own QR code."
+        description="Semi-expendable properties are grouped by type. Search by Item No. or ICSNO. Each item has its own QR code."
         actions={
           can("encode") ? (
             <Link href="/properties/new">
@@ -83,42 +87,57 @@ export default function PropertiesPage() {
         />
       ) : (
         <div className="space-y-4">
-          {groups.map((group) => (
-            <article key={group.icsNumber} className="surface p-5">
+          {typeGroups.map((group) => (
+            <article key={group.key} className="surface p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">ICSNO.</p>
-                  <h2 className="font-display text-3xl">{group.icsNumber}</h2>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {group.properties.length} item{group.properties.length === 1 ? "" : "s"}
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--text-muted)]">
+                    {group.code ? `Code: ${group.code}` : "Classification"}
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/properties/group/${encodeURIComponent(group.icsNumber)}`}>
-                    <Button type="button" variant="secondary">
-                      Open group
-                    </Button>
-                  </Link>
-                  <Button type="button" variant="secondary" onClick={() => downloadGroup(group.icsNumber)}>
-                    <Download className="h-4 w-4" /> Excel
-                  </Button>
+                  <h2 className="font-display text-3xl">{group.label}</h2>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {group.items.length} item{group.items.length === 1 ? "" : "s"}
+                  </p>
                 </div>
               </div>
               <ul className="mt-4 space-y-2 text-sm">
-                {group.properties.map((p) => (
-                  <li key={p.id} className="flex flex-col gap-2 border-t border-[var(--border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                {group.items.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-col gap-2 border-t border-[var(--border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                  >
                     <span className="min-w-0 break-words">
                       <span className="text-[var(--text-muted)]">{p.inventoryItemNumber}</span>
                       <span className="mx-2">·</span>
                       {p.description}
+                      <span className="mx-2 text-[var(--text-muted)]">·</span>
+                      <span className="text-[var(--text-muted)]">ICSNO. {p.icsNumber}</span>
                     </span>
                     <span className="flex flex-wrap gap-2">
-                      <button type="button" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]" onClick={() => setQrId(p.id)}>
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
+                        onClick={() => setQrId(p.id)}
+                      >
                         <QrCode className="h-3.5 w-3.5" /> QR
                       </button>
-                      <Link href={`/properties/${p.id}`} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]">
+                      <Link
+                        href={`/properties/${p.id}`}
+                        className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
+                      >
                         <Eye className="h-3.5 w-3.5" /> View
                       </Link>
+                      <Link href={`/properties/group/${encodeURIComponent(p.icsNumber)}`}>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs uppercase tracking-widest transition hover:bg-[#FFFFD3] hover:text-[#1a1a1e]"
+                        >
+                          ICSNO.
+                        </button>
+                      </Link>
+                      <Button type="button" variant="secondary" onClick={() => downloadGroup(p.icsNumber)}>
+                        <Download className="h-3.5 w-3.5" /> Excel
+                      </Button>
                     </span>
                   </li>
                 ))}

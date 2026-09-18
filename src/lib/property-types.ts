@@ -1,4 +1,4 @@
-import type { PropertyClassification } from "@/types";
+import type { ConsumableSupply, PropertyClassification, PropertyRecord } from "@/types";
 
 export type PropertyTypeOption = { label: string; code: string };
 
@@ -64,7 +64,7 @@ export function validateTypeFields(
 ): { type?: string; code?: string } {
   if (!classificationNeedsType(classification)) return {};
   const label =
-    classification === "semi_expendable" ? "Semi-Expendable Type" : "Consumable Type";
+    classification === "semi_expendable" ? "Semi-Expendable Property Type" : "Consumable Type";
   if (!type.trim()) return { type: `${label} is required.` };
   const expected = codeForType(classification, type);
   if (!expected) return { type: `Select a valid ${label}.` };
@@ -77,4 +77,83 @@ export function classificationLabel(value: PropertyClassification): string {
   if (value === "high_value") return "High-Value";
   if (value === "semi_expendable") return "Semi-Expendable";
   return "Consumable";
+}
+
+export type TypeGroup<T> = {
+  key: string;
+  label: string;
+  code: string;
+  items: T[];
+};
+
+function typeGroupOrder(options: PropertyTypeOption[], type: string, code: string) {
+  const byLabel = options.findIndex((t) => t.label === type);
+  if (byLabel >= 0) return byLabel;
+  const byCode = options.findIndex((t) => t.code === code);
+  if (byCode >= 0) return byCode;
+  return options.length + 1;
+}
+
+/** Group semi-expendable (and other) properties by saved type/code. */
+export function groupPropertiesBySemiExpendableType(properties: PropertyRecord[]): TypeGroup<PropertyRecord>[] {
+  const map = new Map<string, TypeGroup<PropertyRecord>>();
+  for (const property of properties) {
+    const isSemi = property.classification === "semi_expendable";
+    const known = SEMI_EXPENDABLE_TYPES.find(
+      (t) => t.label === property.type || t.code === property.code,
+    );
+    const label = isSemi
+      ? known?.label || property.type || "Unclassified Semi-Expendable"
+      : classificationLabel(property.classification);
+    const code = isSemi ? known?.code || property.code || "" : "";
+    const key = isSemi ? `semi:${code || label}` : `other:${property.classification}`;
+    const group = map.get(key) ?? { key, label, code, items: [] };
+    group.items.push(property);
+    map.set(key, group);
+  }
+
+  return [...map.values()]
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .slice()
+        .sort((a, b) => a.inventoryItemNumber.localeCompare(b.inventoryItemNumber)),
+    }))
+    .sort((a, b) => {
+      const aSemi = a.key.startsWith("semi:");
+      const bSemi = b.key.startsWith("semi:");
+      if (aSemi && bSemi) {
+        return (
+          typeGroupOrder(SEMI_EXPENDABLE_TYPES, a.label, a.code) -
+          typeGroupOrder(SEMI_EXPENDABLE_TYPES, b.label, b.code)
+        );
+      }
+      if (aSemi !== bSemi) return aSemi ? -1 : 1;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+/** Group consumable supplies by saved Consumable Type/code. */
+export function groupSuppliesByConsumableType(supplies: ConsumableSupply[]): TypeGroup<ConsumableSupply>[] {
+  const map = new Map<string, TypeGroup<ConsumableSupply>>();
+  for (const supply of supplies) {
+    const known = CONSUMABLE_TYPES.find((t) => t.label === supply.type || t.code === supply.code);
+    const label = known?.label || supply.type || "Unclassified Consumable";
+    const code = known?.code || supply.code || "";
+    const key = `cons:${code || label}`;
+    const group = map.get(key) ?? { key, label, code, items: [] };
+    group.items.push(supply);
+    map.set(key, group);
+  }
+
+  return [...map.values()]
+    .map((group) => ({
+      ...group,
+      items: group.items.slice().sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort(
+      (a, b) =>
+        typeGroupOrder(CONSUMABLE_TYPES, a.label, a.code) -
+        typeGroupOrder(CONSUMABLE_TYPES, b.label, b.code),
+    );
 }
