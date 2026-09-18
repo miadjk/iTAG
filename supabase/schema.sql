@@ -132,6 +132,7 @@ create table if not exists public.consumable_supplies (
   classification text not null default 'consumable',
   type text not null default '',
   code text not null default '',
+  archived boolean not null default false,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

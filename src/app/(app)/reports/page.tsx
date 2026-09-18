@@ -86,8 +86,8 @@ export default function ReportsPage() {
       const rows = state.stockTransactions
         .filter((t) => (isIn ? t.type === "in" : t.type === "out"))
         .map((t) => {
-          const name = supplyNameFor(t, schoolSupplies);
-          const unit = supplyUnitFor(t, schoolSupplies);
+          const name = supplyNameFor(t, state.supplies);
+          const unit = supplyUnitFor(t, state.supplies);
           const qty = unit ? `${t.quantity} ${unit}` : String(t.quantity);
           if (isIn) {
             return [name, qty, t.reference || t.purpose || "—", formatReportDate(t.date)];
@@ -229,8 +229,8 @@ export default function ReportsPage() {
               {state.stockTransactions
                 .filter((t) => (report.includes("Stock-In") ? t.type === "in" : t.type === "out"))
                 .map((t) => {
-                  const name = supplyNameFor(t, schoolSupplies);
-                  const unit = supplyUnitFor(t, schoolSupplies);
+                  const name = supplyNameFor(t, state.supplies);
+                  const unit = supplyUnitFor(t, state.supplies);
                   const qty = unit ? `${t.quantity} ${unit}` : String(t.quantity);
                   if (report.includes("Stock-In")) {
                     return (

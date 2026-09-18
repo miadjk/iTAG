@@ -152,6 +152,7 @@ export function mapSupply(row: Row): ConsumableSupply {
     classification: (row.classification as ConsumableSupply["classification"]) || "consumable",
     type: str(row.type),
     code: str(row.code),
+    archived: Boolean(row.archived) || str(row.remarks).startsWith("__ARCHIVED__"),
     createdBy: str(row.created_by),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),

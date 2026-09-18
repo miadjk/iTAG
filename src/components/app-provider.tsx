@@ -136,6 +136,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const schoolSupplies = useMemo(() => {
     if (!user?.schoolId) return [];
+    // Active supplies only — archived rows stay in state for history/report name lookup.
+    return state.supplies.filter((s) => s.schoolId === user.schoolId && !s.archived);
+  }, [state, user]);
+
+  const schoolSuppliesAll = useMemo(() => {
+    if (!user?.schoolId) return [];
     return state.supplies.filter((s) => s.schoolId === user.schoolId);
   }, [state, user]);
 
@@ -793,7 +799,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const upsertSupply = async (
-    input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt"> & { id?: string },
+    input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt" | "archived"> & {
+      id?: string;
+      /** Opening stock for a brand-new supply only; ignored when updating an existing supply. */
+      openingQuantity?: number;
+    },
   ) => {
     const client = await requireClient();
     if (!user?.schoolId || user.role !== "property_custodian") throw new Error("Not authorized.");
@@ -818,23 +828,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const existing = targetId ? schoolSupplies.find((s) => s.id === targetId) : undefined;
-    const openingQty = Math.max(0, Number(input.currentQuantity) || 0);
-    // Matching existing supply: keep current quantity (use Stock-in for additions). New supply starts at 0 then records opening stock.
+    // Available Stock (= current_quantity) is owned by stock-in/out. Never overwrite from the form on update.
+    const openingQty = existing ? 0 : Math.max(0, Number(input.openingQuantity ?? input.currentQuantity) || 0);
     const quantityForRow = existing ? existing.currentQuantity : 0;
-    const status = deriveSupplyStatus(existing ? existing.currentQuantity : openingQty, input.minimumStockLevel);
+    // Keep any existing minimum threshold for alerts; do not treat Available Stock as a minimum.
+    const minimumStockLevel = existing ? existing.minimumStockLevel : Math.max(0, Number(input.minimumStockLevel) || 0);
+    const status = deriveSupplyStatus(quantityForRow, minimumStockLevel);
     const row = {
       school_id: user.schoolId,
       name,
       description: input.description,
       unit,
       current_quantity: quantityForRow,
-      minimum_stock_level: input.minimumStockLevel,
+      minimum_stock_level: minimumStockLevel,
       location: input.location,
       remarks: input.remarks,
       classification,
       type,
       code,
-      status: existing ? deriveSupplyStatus(existing.currentQuantity, input.minimumStockLevel) : deriveSupplyStatus(0, input.minimumStockLevel),
+      status,
       created_by: existing?.createdBy || user.id,
     };
 
@@ -857,7 +869,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       if (movement.error) {
         // Fallback if RPC patch is not applied yet: set quantity and write history row.
-        const fallbackStatus = deriveSupplyStatus(openingQty, input.minimumStockLevel);
+        const fallbackStatus = deriveSupplyStatus(openingQty, minimumStockLevel);
         const updated = await client
           .from("consumable_supplies")
           .update({ current_quantity: openingQty, status: fallbackStatus })
@@ -905,7 +917,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       classification,
       type,
       code,
+      archived: false,
     };
+  };
+
+  const deleteSupply = async (id: string) => {
+    const client = await requireClient();
+    if (!user || user.role !== "property_custodian") throw new Error("Not authorized.");
+    const current = schoolSupplies.find((s) => s.id === id) ?? schoolSuppliesAll.find((s) => s.id === id);
+    if (!current) throw new Error("Supply not found.");
+    // Soft-delete only: keep the row so stock_transactions and reports retain history.
+    const archived = await client
+      .from("consumable_supplies")
+      .update({ archived: true })
+      .eq("id", id)
+      .eq("school_id", user.schoolId)
+      .select("id")
+      .maybeSingle();
+    if (archived.error) {
+      // DB may not have the archived column yet — mark via remarks sentinel (same soft-delete effect).
+      const marker = `__ARCHIVED__`;
+      const nextRemarks = current.remarks.startsWith(marker) ? current.remarks : `${marker}${current.remarks}`;
+      const fallback = await client
+        .from("consumable_supplies")
+        .update({ remarks: nextRemarks })
+        .eq("id", id)
+        .eq("school_id", user.schoolId)
+        .select("id")
+        .maybeSingle();
+      throwIfError(fallback.error, "Unable to delete supply.");
+      if (!fallback.data) throw new Error("Unable to delete supply.");
+    } else if (!archived.data) {
+      throw new Error("Unable to delete supply.");
+    }
+    await writeAudit("Supply deleted", "supply", id, current.name);
+    await refresh();
+    pushToast({
+      title: "Supply removed",
+      body: `${current.name} was removed from active supplies. Stock history is kept for reports.`,
+      tone: "success",
+    });
   };
 
   async function applyStockMovement(input: {
@@ -1009,7 +1060,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     reference?: string;
   }) => {
     await applyStockMovement({ ...input, type: "in" });
-    pushToast({ title: "Stock-in recorded", body: "Current quantity increased and history was saved.", tone: "success" });
+    pushToast({ title: "Stock-in recorded", body: "Available stock increased and history was saved.", tone: "success" });
   };
 
   const stockOut = async (input: {
@@ -1021,7 +1072,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     remarks: string;
   }) => {
     await applyStockMovement({ ...input, type: "out" });
-    pushToast({ title: "Stock-out recorded", body: "Remaining stock was updated.", tone: "success" });
+    pushToast({ title: "Stock-out recorded", body: "Available stock decreased and history was saved.", tone: "success" });
   };
 
   const markNotificationRead = async (id: string) => {
@@ -1085,6 +1136,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         transferProperty,
         verifyProperty,
         upsertSupply,
+        deleteSupply,
         stockIn,
         stockOut,
         markNotificationRead,

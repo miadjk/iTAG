@@ -81,8 +81,12 @@ export type AppContextValue = {
     remarks: string;
   }) => Promise<void>;
   upsertSupply: (
-    input: Omit<ConsumableSupply, "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt"> & { id?: string },
+    input: Omit<
+      ConsumableSupply,
+      "id" | "schoolId" | "createdBy" | "status" | "createdAt" | "updatedAt" | "archived"
+    > & { id?: string; openingQuantity?: number },
   ) => Promise<ConsumableSupply>;
+  deleteSupply: (id: string) => Promise<void>;
   stockIn: (input: {
     supplyId: string;
     quantity: number;

@@ -169,7 +169,9 @@ export interface ConsumableSupply {
   name: string;
   description: string;
   unit: string;
+  /** Current inventory balance — source of truth, updated by stock-in/stock-out. */
   currentQuantity: number;
+  /** Internal low-stock threshold (not shown as Available Stock in the UI). */
   minimumStockLevel: number;
   location: string;
   status: SupplyStatus;
@@ -177,6 +179,8 @@ export interface ConsumableSupply {
   classification: PropertyClassification;
   type: string;
   code: string;
+  /** Soft-deleted supplies stay in DB so stock history/reports remain intact. */
+  archived: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
