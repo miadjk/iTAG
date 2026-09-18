@@ -217,8 +217,7 @@ function EditForm({
     e.preventDefault();
     if (form.classification === "consumable") {
       setFieldErrors({
-        propertyType:
-          "Consumables belong in Supplies. Change Classification to Semi-Expendable – Low Value or High Value.",
+        propertyType: "Consumables belong in Supplies. Change Classification to Low Value or High Value.",
       });
       return;
     }
@@ -288,8 +287,8 @@ function EditForm({
       ) : null}
       {form.classification === "consumable" ? (
         <p className="break-words text-sm text-[var(--text-muted)] md:col-span-2">
-          Consumable inventory is managed in Supplies. Change Classification to Semi-Expendable – Low
-          Value or High Value to keep this as a property.
+          Consumable inventory is managed in Supplies. Change Classification to Low Value or High Value to keep
+          this as a property.
         </p>
       ) : null}
       {classificationNeedsType(form.classification) && isSemiExpendableProperty(form.classification) ? (

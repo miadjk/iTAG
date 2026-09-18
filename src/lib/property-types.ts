@@ -81,8 +81,8 @@ export function validateTypeFields(
 }
 
 export function classificationLabel(value: PropertyClassification): string {
-  if (value === "low_value") return "Semi-Expendable – Low Value";
-  if (value === "high_value") return "Semi-Expendable – High Value";
+  if (value === "low_value") return "Low Value";
+  if (value === "high_value") return "High Value";
   if (value === "semi_expendable") return "Semi-Expendable";
   return "Consumable";
 }
