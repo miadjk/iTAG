@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
-import { propertyOnlineResultUrl, propertyQrPayload } from "@/lib/qr";
+import { propertyQrPayload } from "@/lib/qr";
 import type { PropertyClassification, PropertyStatus } from "@/types";
 
 export function QrCard({
@@ -31,7 +31,6 @@ export function QrCard({
 }) {
   const [src, setSrc] = useState("");
   const payload = propertyQrPayload(property);
-  const onlineUrl = propertyOnlineResultUrl(property.qrCode);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,14 +76,6 @@ export function QrCard({
       <p className="mt-2 text-[11px] text-[var(--text-muted)]">
         Self-contained offline QR. Scan with any phone camera — no internet required.
       </p>
-      {onlineUrl ? (
-        <p className="mt-2 break-all text-[11px] text-[var(--text-muted)]">
-          Online result (separate from QR):{" "}
-          <a href={onlineUrl} className="text-[#3F3FA3] underline" target="_blank" rel="noreferrer">
-            {onlineUrl}
-          </a>
-        </p>
-      ) : null}
       <Button type="button" className="mt-4 w-full" onClick={download}>
         Save QR image
       </Button>
