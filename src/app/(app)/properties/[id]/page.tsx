@@ -16,6 +16,7 @@ import { downloadPropertyExcel } from "@/lib/files";
 import {
   classificationNeedsType,
   codeForType,
+  isSemiExpendableProperty,
   normalizeTypeFields,
   SEMI_EXPENDABLE_TYPES,
   validateTypeFields,
@@ -194,17 +195,21 @@ function EditForm({
     setForm((prev) => ({
       ...prev,
       classification,
-      type: classification === "semi_expendable" ? prev.type : "",
-      code: classification === "semi_expendable" ? prev.code : "",
+      // Keep type/code when switching Low ↔ High Value; clear only when leaving semi-expendable.
+      type: isSemiExpendableProperty(classification) ? prev.type : "",
+      code: isSemiExpendableProperty(classification)
+        ? prev.type
+          ? codeForType(classification, prev.type)
+          : prev.code
+        : "",
     }));
   }
 
   function setPropertyType(typeLabel: string) {
     setForm((prev) => ({
       ...prev,
-      classification: "semi_expendable",
       type: typeLabel,
-      code: codeForType("semi_expendable", typeLabel),
+      code: codeForType(prev.classification, typeLabel),
     }));
   }
 
@@ -212,7 +217,8 @@ function EditForm({
     e.preventDefault();
     if (form.classification === "consumable") {
       setFieldErrors({
-        propertyType: "Consumables belong in Supplies. Change Classification to Semi-Expendable.",
+        propertyType:
+          "Consumables belong in Supplies. Change Classification to Semi-Expendable – Low Value or High Value.",
       });
       return;
     }
@@ -239,10 +245,16 @@ function EditForm({
     }
   }
 
-  const classificationOptions =
-    form.classification === "consumable"
-      ? [...CLASSIFICATIONS, { value: "consumable" as const, label: "Consumable (move to Supplies)" }]
-      : CLASSIFICATIONS;
+  const classificationOptions = (() => {
+    const base = [...CLASSIFICATIONS];
+    if (form.classification === "semi_expendable") {
+      base.push({ value: "semi_expendable", label: "Semi-Expendable" });
+    }
+    if (form.classification === "consumable") {
+      base.push({ value: "consumable", label: "Consumable (move to Supplies)" });
+    }
+    return base;
+  })();
 
   return (
     <>
@@ -262,7 +274,7 @@ function EditForm({
           ))}
         </Select>
       </Field>
-      {form.classification === "semi_expendable" ? (
+      {isSemiExpendableProperty(form.classification) ? (
         <Field label="Semi-Expendable Property Type" error={fieldErrors.propertyType}>
           <Select value={form.type} onChange={(e) => setPropertyType(e.target.value)}>
             <option value="">Select type</option>
@@ -276,10 +288,11 @@ function EditForm({
       ) : null}
       {form.classification === "consumable" ? (
         <p className="break-words text-sm text-[var(--text-muted)] md:col-span-2">
-          Consumable inventory is managed in Supplies. Change Classification to Semi-Expendable to keep this as a property.
+          Consumable inventory is managed in Supplies. Change Classification to Semi-Expendable – Low
+          Value or High Value to keep this as a property.
         </p>
       ) : null}
-      {classificationNeedsType(form.classification) && form.classification === "semi_expendable" ? (
+      {classificationNeedsType(form.classification) && isSemiExpendableProperty(form.classification) ? (
         <Field label="Code" error={fieldErrors.propertyCode}>
           <Input readOnly value={form.code} placeholder="Auto-generated" />
         </Field>

@@ -10,7 +10,7 @@ import { Field, Input } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
 import { useApp } from "@/lib/app-context";
 import { downloadIcsExcel } from "@/lib/files";
-import { groupPropertiesBySemiExpendableType } from "@/lib/property-types";
+import { groupPropertiesBySemiExpendableType, classificationLabel } from "@/lib/property-types";
 import { searchProperties } from "@/lib/search";
 
 export default function PropertiesPage() {
@@ -110,6 +110,8 @@ export default function PropertiesPage() {
                       <span className="text-[var(--text-muted)]">{p.inventoryItemNumber}</span>
                       <span className="mx-2">·</span>
                       {p.description}
+                      <span className="mx-2 text-[var(--text-muted)]">·</span>
+                      <span className="text-[var(--text-muted)]">{classificationLabel(p.classification)}</span>
                       <span className="mx-2 text-[var(--text-muted)]">·</span>
                       <span className="text-[var(--text-muted)]">ICSNO. {p.icsNumber}</span>
                     </span>

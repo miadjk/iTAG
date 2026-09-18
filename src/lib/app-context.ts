@@ -137,9 +137,8 @@ export function useOptionalApp() {
 }
 
 export const CLASSIFICATIONS: { value: PropertyClassification; label: string }[] = [
-  { value: "high_value", label: "High-Value" },
-  { value: "low_value", label: "Low-Value" },
-  { value: "semi_expendable", label: "Semi-Expendable" },
+  { value: "low_value", label: "Semi-Expendable – Low Value" },
+  { value: "high_value", label: "Semi-Expendable – High Value" },
 ];
 
 /** Classifications available when encoding/editing properties (Consumable belongs in Supplies only). */

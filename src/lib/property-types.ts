@@ -27,8 +27,16 @@ export const CONSUMABLE_TYPES: PropertyTypeOption[] = [
   { label: "Others", code: "OTH" },
 ];
 
+export function isSemiExpendableProperty(classification: PropertyClassification) {
+  return (
+    classification === "low_value" ||
+    classification === "high_value" ||
+    classification === "semi_expendable"
+  );
+}
+
 export function typesForClassification(classification: PropertyClassification): PropertyTypeOption[] {
-  if (classification === "semi_expendable") return SEMI_EXPENDABLE_TYPES;
+  if (isSemiExpendableProperty(classification)) return SEMI_EXPENDABLE_TYPES;
   if (classification === "consumable") return CONSUMABLE_TYPES;
   return [];
 }
@@ -39,7 +47,7 @@ export function codeForType(classification: PropertyClassification, typeLabel: s
 }
 
 export function classificationNeedsType(classification: PropertyClassification): boolean {
-  return classification === "semi_expendable" || classification === "consumable";
+  return isSemiExpendableProperty(classification) || classification === "consumable";
 }
 
 export function normalizeTypeFields(
@@ -64,7 +72,7 @@ export function validateTypeFields(
 ): { type?: string; code?: string } {
   if (!classificationNeedsType(classification)) return {};
   const label =
-    classification === "semi_expendable" ? "Semi-Expendable Property Type" : "Consumable Type";
+    classification === "consumable" ? "Consumable Type" : "Semi-Expendable Property Type";
   if (!type.trim()) return { type: `${label} is required.` };
   const expected = codeForType(classification, type);
   if (!expected) return { type: `Select a valid ${label}.` };
@@ -73,8 +81,8 @@ export function validateTypeFields(
 }
 
 export function classificationLabel(value: PropertyClassification): string {
-  if (value === "low_value") return "Low-Value";
-  if (value === "high_value") return "High-Value";
+  if (value === "low_value") return "Semi-Expendable – Low Value";
+  if (value === "high_value") return "Semi-Expendable – High Value";
   if (value === "semi_expendable") return "Semi-Expendable";
   return "Consumable";
 }
@@ -94,11 +102,11 @@ function typeGroupOrder(options: PropertyTypeOption[], type: string, code: strin
   return options.length + 1;
 }
 
-/** Group semi-expendable (and other) properties by saved type/code. */
+/** Group properties by Semi-Expendable Property Type (Low/High Value stay per-item attributes). */
 export function groupPropertiesBySemiExpendableType(properties: PropertyRecord[]): TypeGroup<PropertyRecord>[] {
   const map = new Map<string, TypeGroup<PropertyRecord>>();
   for (const property of properties) {
-    const isSemi = property.classification === "semi_expendable";
+    const isSemi = isSemiExpendableProperty(property.classification);
     const known = SEMI_EXPENDABLE_TYPES.find(
       (t) => t.label === property.type || t.code === property.code,
     );

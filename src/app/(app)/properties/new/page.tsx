@@ -7,9 +7,10 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select } from "@/components/ui/field";
-import { useApp, type PropertyInput } from "@/lib/app-context";
+import { CLASSIFICATIONS, useApp, type PropertyInput } from "@/lib/app-context";
 import { getSchoolName } from "@/lib/locations";
 import {
+  classificationLabel,
   codeForType,
   normalizeTypeFields,
   SEMI_EXPENDABLE_TYPES,
@@ -61,7 +62,7 @@ export default function NewPropertyPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const schoolName = getSchoolName(user?.schoolId) || user?.schoolName || "";
   const [header, setHeader] = useState({
-    classification: "semi_expendable" as PropertyClassification,
+    classification: "low_value" as PropertyClassification,
     type: "",
     code: "",
     entityName: schoolName,
@@ -96,15 +97,22 @@ export default function NewPropertyPage() {
   useEffect(() => {
     if (!existingGroup.length) return;
     const first = existingGroup[0];
+    const inheritedClassification: PropertyClassification =
+      first.classification === "high_value" || first.classification === "low_value"
+        ? first.classification
+        : "low_value";
     setHeader((prev) => ({
       ...prev,
       entityName: prev.entityName || first.entityName,
       fundCluster: prev.fundCluster || first.fundCluster,
       location: prev.location || first.location,
       officeDepartment: prev.officeDepartment || first.officeDepartment,
-      classification: "semi_expendable",
+      classification: prev.classification || inheritedClassification,
       type: prev.type || first.type || "",
-      code: prev.code || first.code || "",
+      code:
+        prev.code ||
+        first.code ||
+        codeForType(prev.classification || inheritedClassification, prev.type || first.type || ""),
       receivedFromName: prev.receivedFromName || first.receivedFromName || "",
       receivedFromPosition: prev.receivedFromPosition || first.receivedFromPosition || "",
       receivedByName: prev.receivedByName || first.receivedByName || "",
@@ -112,12 +120,20 @@ export default function NewPropertyPage() {
     }));
   }, [existingGroup]);
 
+  function setClassification(classification: PropertyClassification) {
+    setHeader((prev) => ({
+      ...prev,
+      classification,
+      // Keep selected type/code when switching Low ↔ High Value.
+      code: prev.type ? codeForType(classification, prev.type) : prev.code,
+    }));
+  }
+
   function setPropertyType(typeLabel: string) {
     setHeader((prev) => ({
       ...prev,
-      classification: "semi_expendable",
       type: typeLabel,
-      code: codeForType("semi_expendable", typeLabel),
+      code: codeForType(prev.classification, typeLabel),
     }));
   }
 
@@ -138,7 +154,7 @@ export default function NewPropertyPage() {
     if (!header.receivedFromPosition.trim()) next.receivedFromPosition = "This field is required.";
     if (!header.receivedByName.trim()) next.receivedByName = "This field is required.";
     if (!header.receivedByPosition.trim()) next.receivedByPosition = "This field is required.";
-    const typeErrors = validateTypeFields("semi_expendable", header.type, header.code);
+    const typeErrors = validateTypeFields(header.classification, header.type, header.code);
     if (typeErrors.type) next.propertyType = typeErrors.type;
     if (typeErrors.code) next.propertyCode = typeErrors.code;
     items.forEach((item, index) => {
@@ -175,9 +191,9 @@ export default function NewPropertyPage() {
     if (loading) return;
     setLoading(true);
     try {
-      const typeFields = normalizeTypeFields("semi_expendable", header.type, header.code);
+      const typeFields = normalizeTypeFields(header.classification, header.type, header.code);
       const payload: PropertyInput[] = items.map((item) => ({
-        classification: "semi_expendable",
+        classification: header.classification,
         type: typeFields.type,
         code: typeFields.code,
         entityName: header.entityName.trim(),
@@ -229,7 +245,16 @@ export default function NewPropertyPage() {
       <form onSubmit={requestSave} noValidate className="space-y-6 sm:space-y-8">
         <section className="surface grid grid-cols-1 gap-4 p-4 sm:p-5 md:grid-cols-2">
           <Field label="Classification">
-            <Input readOnly value="Semi-Expendable" />
+            <Select
+              value={header.classification}
+              onChange={(e) => setClassification(e.target.value as PropertyClassification)}
+            >
+              {CLASSIFICATIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           <Field label="Semi-Expendable Property Type" error={fieldErrors.propertyType}>
             <Select value={header.type} onChange={(e) => setPropertyType(e.target.value)}>
@@ -379,7 +404,7 @@ export default function NewPropertyPage() {
         message={items.length > 1 ? "Are you sure you want to save these properties?" : "Are you sure you want to save this property?"}
         details={
           <>
-            <p>Classification: Semi-Expendable</p>
+            <p>Classification: {classificationLabel(header.classification)}</p>
             <p>Semi-Expendable Property Type: {header.type || "—"}</p>
             <p>Code: {header.code || "—"}</p>
             <p>ICSNO.: {header.icsNumber || "—"}</p>
