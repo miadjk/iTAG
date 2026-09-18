@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, Eye, Package, Pencil, QrCode, Search } from "lucide-react";
+import { Download, Eye, Package, Pencil, QrCode, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input } from "@/components/ui/field";
 import { QrCard } from "@/components/qr-card";
@@ -12,12 +13,16 @@ import { useApp } from "@/lib/app-context";
 import { downloadIcsExcel } from "@/lib/files";
 import { groupPropertiesBySemiExpendableType, classificationLabel } from "@/lib/property-types";
 import { searchProperties } from "@/lib/search";
+import type { PropertyRecord } from "@/types";
 
 export default function PropertiesPage() {
-  const { schoolProperties, can } = useApp();
+  const { schoolProperties, can, deleteProperty, state } = useApp();
   const [query, setQuery] = useState("");
   const [qrId, setQrId] = useState<string | null>(null);
   const [excelError, setExcelError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<PropertyRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const qrProperty = schoolProperties.find((p) => p.id === qrId);
   const typeGroups = useMemo(
     () => groupPropertiesBySemiExpendableType(schoolProperties),
@@ -32,6 +37,40 @@ export default function PropertiesPage() {
     } catch (err) {
       setExcelError(err instanceof Error ? err.message : "Unable to download Excel.");
     }
+  }
+
+  function requestDelete(property: PropertyRecord) {
+    setDeleteError("");
+    setDeleteTarget(property);
+  }
+
+  async function confirmDelete() {
+    if (deleting || !deleteTarget) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const id = deleteTarget.id;
+      await deleteProperty(id);
+      if (qrId === id) setQrId(null);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Unable to delete property.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function deleteProtectionNote(property: PropertyRecord) {
+    const hasAssignments = state.assignments.some((a) => a.propertyId === property.id);
+    const hasTransfers = state.transfers.some((t) => t.propertyId === property.id);
+    const hasVerifications = state.verifications.some((v) => v.propertyId === property.id);
+    const hasProtectedHistory = state.propertyHistory.some(
+      (h) => h.propertyId === property.id && h.action !== "created",
+    );
+    if (hasAssignments || hasTransfers || hasVerifications || hasProtectedHistory) {
+      return "This property has assignment, transfer, or history records. It will be archived (removed from My Properties) without destroying those records.";
+    }
+    return "This property has no assignment/transfer history and will be permanently deleted.";
   }
 
   return (
@@ -69,9 +108,16 @@ export default function PropertiesPage() {
         </div>
       </form>
       {excelError ? <p className="mb-4 break-words text-sm text-red-700">{excelError}</p> : null}
+      {deleteError ? <p className="mb-4 break-words text-sm text-red-700">{deleteError}</p> : null}
 
       {query.trim() ? (
-        <SearchResults result={result} canEncode={can("encode")} onQr={setQrId} onExcel={downloadGroup} />
+        <SearchResults
+          result={result}
+          canEncode={can("encode")}
+          onQr={setQrId}
+          onExcel={downloadGroup}
+          onDelete={can("encode") ? requestDelete : undefined}
+        />
       ) : schoolProperties.length === 0 ? (
         <EmptyState
           icon={Package}
@@ -140,6 +186,11 @@ export default function PropertiesPage() {
                       <Button type="button" variant="secondary" onClick={() => downloadGroup(p.icsNumber)}>
                         <Download className="h-3.5 w-3.5" /> Excel
                       </Button>
+                      {can("encode") ? (
+                        <Button type="button" variant="secondary" onClick={() => requestDelete(p)}>
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      ) : null}
                     </span>
                   </li>
                 ))}
@@ -159,6 +210,28 @@ export default function PropertiesPage() {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Property?"
+        message={`Are you sure you want to delete ${deleteTarget?.description || "this property"}?`}
+        details={
+          deleteTarget ? (
+            <>
+              <p>Item No.: {deleteTarget.inventoryItemNumber || "—"}</p>
+              <p>ICSNO.: {deleteTarget.icsNumber || "—"}</p>
+              <p>{deleteProtectionNote(deleteTarget)}</p>
+            </>
+          ) : null
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onCancel={() => {
+          if (deleting) return;
+          setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
@@ -168,11 +241,13 @@ function SearchResults({
   canEncode,
   onQr,
   onExcel,
+  onDelete,
 }: {
   result: ReturnType<typeof searchProperties>;
   canEncode: boolean;
   onQr: (id: string) => void;
   onExcel: (ics: string) => void;
+  onDelete?: (property: PropertyRecord) => void;
 }) {
   if (result.kind === "empty") return null;
   if (result.kind === "none") {
@@ -207,6 +282,11 @@ function SearchResults({
               Open ICSNO. group
             </Button>
           </Link>
+          {canEncode && onDelete ? (
+            <Button type="button" variant="secondary" onClick={() => onDelete(p)}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          ) : null}
         </div>
       </article>
     );

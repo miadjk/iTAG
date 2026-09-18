@@ -38,6 +38,7 @@ export type PropertyInput = Omit<
   | "updatedAt"
   | "totalCost"
   | "propertyNumber"
+  | "archived"
 > & { totalCost?: number; propertyNumber?: string };
 
 export type AppContextValue = {

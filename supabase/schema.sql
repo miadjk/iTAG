@@ -73,6 +73,7 @@ create table if not exists public.properties (
   permanent_id text,
   qr_version integer not null default 1,
   excel_generated_at timestamptz,
+  archived boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint properties_item_unique unique (school_id, inventory_item_number)
@@ -193,6 +194,7 @@ create table if not exists public.audit_logs (
 create index if not exists properties_school_ics_idx on public.properties (school_id, ics_number);
 create index if not exists properties_school_item_idx on public.properties (school_id, inventory_item_number);
 create index if not exists properties_qr_idx on public.properties (qr_code);
+create index if not exists properties_archived_idx on public.properties (school_id, archived);
 create index if not exists profiles_school_idx on public.profiles (school_id);
 create index if not exists assignments_property_idx on public.property_assignments (property_id);
 create index if not exists transfers_property_idx on public.property_transfers (property_id);

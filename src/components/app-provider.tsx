@@ -131,7 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const schoolProperties = useMemo(() => {
     if (!user?.schoolId) return [];
-    return state.properties.filter((p) => p.schoolId === user.schoolId);
+    return state.properties.filter((p) => p.schoolId === user.schoolId && !p.archived);
   }, [state, user]);
 
   const schoolSupplies = useMemo(() => {
@@ -550,13 +550,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteProperty = async (id: string) => {
     const client = await requireClient();
     if (!user || user.role !== "property_custodian") throw new Error("Not authorized.");
-    const current = schoolProperties.find((p) => p.id === id);
-    if (!current) throw new Error("Property not found.");
-    const removed = await client.from("properties").delete().eq("id", id);
+    const current =
+      schoolProperties.find((p) => p.id === id) ?? state.properties.find((p) => p.id === id);
+    if (!current || current.schoolId !== user.schoolId) throw new Error("Property not found.");
+
+    const hasAssignments = state.assignments.some((a) => a.propertyId === id);
+    const hasTransfers = state.transfers.some((t) => t.propertyId === id);
+    const hasVerifications = state.verifications.some((v) => v.propertyId === id);
+    const hasProtectedHistory = state.propertyHistory.some(
+      (h) => h.propertyId === id && h.action !== "created",
+    );
+    const protectHistory = hasAssignments || hasTransfers || hasVerifications || hasProtectedHistory;
+
+    if (protectHistory) {
+      // Soft-delete: keep the row so assignment/transfer/history/QR records remain.
+      const archived = await client
+        .from("properties")
+        .update({ archived: true })
+        .eq("id", id)
+        .eq("school_id", user.schoolId)
+        .select("id")
+        .maybeSingle();
+      if (archived.error) {
+        const marker = "__ARCHIVED__";
+        const nextRemarks = current.remarks.startsWith(marker)
+          ? current.remarks
+          : `${marker}${current.remarks}`;
+        const fallback = await client
+          .from("properties")
+          .update({ remarks: nextRemarks })
+          .eq("id", id)
+          .eq("school_id", user.schoolId)
+          .select("id")
+          .maybeSingle();
+        throwIfError(fallback.error, "Unable to archive property with existing history.");
+        if (!fallback.data) throw new Error("Unable to archive property with existing history.");
+      } else if (!archived.data) {
+        throw new Error("Unable to archive property with existing history.");
+      }
+      await writeAudit("Property archived", "property", id, current.inventoryItemNumber);
+      await refresh();
+      pushToast({
+        title: "Property archived",
+        body: `${current.description || current.inventoryItemNumber} was removed from My Properties. Assignment, transfer, and history records were kept.`,
+        tone: "success",
+      });
+      return;
+    }
+
+    // Newly encoded property with no dependent inventory transactions — hard delete is safe.
+    const removed = await client.from("properties").delete().eq("id", id).eq("school_id", user.schoolId);
     throwIfError(removed.error, "Unable to delete property.");
     await writeAudit("Property deleted", "property", id, current.inventoryItemNumber);
     await refresh();
-    pushToast({ title: "Property removed", body: `${current.inventoryItemNumber} was deleted.`, tone: "success" });
+    pushToast({
+      title: "Property removed",
+      body: `${current.description || current.inventoryItemNumber} was deleted.`,
+      tone: "success",
+    });
   };
 
   const saveReport = async (reportType: string) => {

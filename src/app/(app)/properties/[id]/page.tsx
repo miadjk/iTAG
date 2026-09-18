@@ -33,6 +33,8 @@ export default function PropertyDetailPage() {
   const [editing, setEditing] = useState(search.get("edit") === "1");
   const [showAssign, setShowAssign] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const created = search.get("created") === "1";
   const scanned = search.get("scan") === "1";
 
@@ -41,6 +43,25 @@ export default function PropertyDetailPage() {
   }
 
   const history = state.propertyHistory.filter((h) => h.propertyId === property.id);
+  const protectHistory =
+    state.assignments.some((a) => a.propertyId === property.id) ||
+    state.transfers.some((t) => t.propertyId === property.id) ||
+    state.verifications.some((v) => v.propertyId === property.id) ||
+    history.some((h) => h.action !== "created");
+
+  async function confirmDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await deleteProperty(property!.id);
+      setDeleteOpen(false);
+      router.push("/properties");
+    } catch {
+      setDeleteOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div>
@@ -88,15 +109,7 @@ export default function PropertyDetailPage() {
               <Download className="h-4 w-4" /> Excel
             </Button>
             {can("encode") ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={async () => {
-                  if (!window.confirm("Delete this property? History for this item will also be removed.")) return;
-                  await deleteProperty(property.id);
-                  router.push("/properties");
-                }}
-              >
+              <Button type="button" variant="secondary" onClick={() => setDeleteOpen(true)}>
                 <Trash2 className="h-4 w-4" /> Delete
               </Button>
             ) : null}
@@ -168,6 +181,27 @@ export default function PropertyDetailPage() {
           <QrCard property={property} />
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete Property?"
+        message={`Are you sure you want to delete ${property.description || "this property"}?`}
+        details={
+          <>
+            <p>Item No.: {property.inventoryItemNumber || "—"}</p>
+            <p>ICSNO.: {property.icsNumber || "—"}</p>
+            <p>
+              {protectHistory
+                ? "This property has assignment, transfer, or history records. It will be archived (removed from My Properties) without destroying those records."
+                : "This property has no assignment/transfer history and will be permanently deleted."}
+            </p>
+          </>
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onCancel={() => !deleting && setDeleteOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

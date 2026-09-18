@@ -119,6 +119,8 @@ export interface PropertyRecord {
   excelGeneratedAt: string;
   createdAt: string;
   updatedAt: string;
+  /** Soft-deleted properties stay in DB so assignment/transfer/history remain intact. */
+  archived: boolean;
 }
 
 export type AssignmentStatus = "pending" | "active" | "completed";

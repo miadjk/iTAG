@@ -88,6 +88,7 @@ export function mapProperty(row: Row): PropertyRecord {
     excelGeneratedAt: str(row.excel_generated_at),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
+    archived: Boolean(row.archived) || str(row.remarks).startsWith("__ARCHIVED__"),
   };
 }
 
